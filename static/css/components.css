@@ -1,0 +1,30 @@
+.mf-status-requested {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.mf-status-confirmed {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.mf-status-checked-in {
+  background: #cffafe;
+  color: #155e75;
+}
+
+.mf-status-completed {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.mf-status-cancelled,
+.mf-status-no-show {
+  background: #ffe4e6;
+  color: #9f1239;
+}
+
+.mf-scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}

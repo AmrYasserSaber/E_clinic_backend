@@ -1,0 +1,40 @@
+<section class="app-table-wrap">
+  <table class="app-table">
+    <thead class="app-table-head">
+      <tr>
+        <th class="app-table-th">Appointment ID</th>
+        <th class="app-table-th">Patient</th>
+        <th class="app-table-th">Doctor</th>
+        <th class="app-table-th">Date</th>
+        <th class="app-table-th">Status</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-app-border/40">
+      {% if rows %}
+        {% for row in rows %}
+          <tr>
+            <td class="app-table-td">{{ row.id }}</td>
+            <td class="app-table-td">{{ row.patient }}</td>
+            <td class="app-table-td">{{ row.doctor }}</td>
+            <td class="app-table-td">{{ row.date }}</td>
+            <td class="app-table-td">
+              {% if row.status == "completed" %}
+                <span class="app-badge-success">Completed</span>
+              {% elif row.status == "cancelled" %}
+                <span class="app-badge-danger">Cancelled</span>
+              {% elif row.status == "requested" %}
+                <span class="app-badge-warning">Requested</span>
+              {% else %}
+                <span class="app-badge-info">{{ row.status }}</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      {% else %}
+        <tr>
+          <td class="app-table-td text-app-text-muted" colspan="5">No records found.</td>
+        </tr>
+      {% endif %}
+    </tbody>
+  </table>
+</section>

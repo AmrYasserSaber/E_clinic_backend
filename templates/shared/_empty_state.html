@@ -1,0 +1,7 @@
+<section class="app-empty">
+  <h3 class="font-headline text-xl font-bold text-app-text">{{ title|default:"No data available" }}</h3>
+  <p class="mt-2 text-sm text-app-text-muted">{{ message|default:"Try adjusting filters or adding new records." }}</p>
+  {% if action_label %}
+    <button type="button" class="app-btn-primary mt-4">{{ action_label }}</button>
+  {% endif %}
+</section>

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Foundation Preview | MediFlow{% endblock %}
+
+{% block page_header %}
+  <section class="mb-6">
+    <h1 class="app-heading">Foundation Preview</h1>
+    <p class="app-subheading mt-1">Shared Tailwind-based layout, components, and tokens for all pages.</p>
+  </section>
+{% endblock %}
+
+{% block content %}
+  {% include "shared/_filters.html" %}
+
+  <section class="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    {% include "shared/_kpi_card.html" with label="Total Appointments" value="1,284" delta="+12%" note="Current month" %}
+    {% include "shared/_kpi_card.html" with label="Completed" value="942" delta="+9%" note="Current month" %}
+    {% include "shared/_kpi_card.html" with label="No Show Rate" value="4.2%" delta="-0.8%" note="Lower is better" %}
+    {% include "shared/_kpi_card.html" with label="Doctors Active" value="48" delta="Stable" note="All departments" %}
+  </section>
+
+  {% include "shared/_table.html" with rows=sample_rows %}
+  {% include "shared/_pagination.html" %}
+
+  <section class="mt-6">
+    {% include "shared/_empty_state.html" with title="No notifications" message="You are all caught up." action_label="Refresh" %}
+  </section>
+{% endblock %}

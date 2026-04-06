@@ -1,0 +1,12 @@
+<section class="space-y-4">
+  <div class="flex items-center justify-between px-1">
+    <h2 class="patient-section-title">Visit History</h2>
+    <button class="text-xs font-bold text-app-primary">See All</button>
+  </div>
+
+  <div class="patient-history-wrap">
+    {% include "shared/patient/_history_item.html" with icon="dentistry" title="General Checkup" subtitle="Sep 12, 2023 • Dr. Aris" status="Completed" is_last=False %}
+    {% include "shared/patient/_history_item.html" with icon="vaccines" title="Vaccination" subtitle="Aug 05, 2023 • Clinic Nurse" status="Completed" is_last=False %}
+    {% include "shared/patient/_history_item.html" with icon="lab_research" title="Blood Test" subtitle="Jul 20, 2023 • Lab Dept" status="cancelled" is_last=True %}
+  </div>
+</section>

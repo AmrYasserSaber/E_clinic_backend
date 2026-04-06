@@ -1,0 +1,18 @@
+:root {
+  --mf-color-primary: #006479;
+  --mf-color-primary-soft: #40cef3;
+  --mf-color-secondary: #006572;
+  --mf-color-bg: #f5f7f9;
+  --mf-color-surface: #ffffff;
+  --mf-color-surface-low: #eef1f3;
+  --mf-color-text: #2c2f31;
+  --mf-color-text-muted: #595c5e;
+  --mf-color-border: #abadaf;
+
+  --mf-radius-sm: 0.5rem;
+  --mf-radius-md: 0.75rem;
+  --mf-radius-pill: 9999px;
+
+  --mf-shadow-soft: -4px -4px 12px rgba(255, 255, 255, 0.8), 4px 4px 12px rgba(0, 0, 0, 0.06);
+  --mf-shadow-inset: inset -2px -2px 6px rgba(255, 255, 255, 0.8), inset 2px 2px 6px rgba(0, 0, 0, 0.06);
+}

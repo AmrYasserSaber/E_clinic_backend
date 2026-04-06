@@ -1,0 +1,8 @@
+<button class="patient-soft-glow flex flex-col items-center gap-3 rounded-xl bg-white p-4 transition-all hover:-translate-y-1">
+  <div class="flex h-12 w-12 items-center justify-center rounded-full {{ icon_bg|default:'bg-app-primary/10' }} {{ icon_color|default:'text-app-primary' }}">
+    <span class="material-symbols-outlined">{{ icon|default:"add_circle" }}</span>
+  </div>
+  <span class="text-center text-[11px] font-bold leading-tight text-app-text">
+    {{ label|default:"Action"|safe }}
+  </span>
+</button>

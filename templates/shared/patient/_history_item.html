@@ -1,0 +1,17 @@
+<article class="patient-history-item {% if not is_last %}mb-[2px]{% endif %}">
+  <div class="flex items-center gap-4">
+    <div class="patient-history-icon">
+      <span class="material-symbols-outlined">{{ icon|default:"medical_services" }}</span>
+    </div>
+    <div>
+      <p class="text-sm font-bold text-app-text">{{ title|default:"Visit" }}</p>
+      <p class="text-[11px] text-app-text-muted">{{ subtitle|default:"Date • Provider" }}</p>
+    </div>
+  </div>
+
+  {% if status == "cancelled" %}
+    <span class="rounded-full bg-red-50 px-3 py-1 text-[10px] font-bold uppercase tracking-tight text-red-600">Cancelled</span>
+  {% else %}
+    <span class="rounded-full bg-green-50 px-3 py-1 text-[10px] font-bold uppercase tracking-tight text-green-600">{{ status|default:"Completed" }}</span>
+  {% endif %}
+</article>

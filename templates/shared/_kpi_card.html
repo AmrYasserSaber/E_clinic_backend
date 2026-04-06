@@ -1,0 +1,12 @@
+<article class="app-card">
+  <p class="text-xs font-semibold uppercase tracking-wide text-app-text-muted">{{ label|default:"Metric" }}</p>
+  <div class="mt-2 flex items-baseline justify-between gap-2">
+    <h3 class="font-headline text-2xl font-extrabold text-app-primary">{{ value|default:"0" }}</h3>
+    {% if delta %}
+      <span class="app-badge-info">{{ delta }}</span>
+    {% endif %}
+  </div>
+  {% if note %}
+    <p class="mt-2 text-xs text-app-text-muted">{{ note }}</p>
+  {% endif %}
+</article>
