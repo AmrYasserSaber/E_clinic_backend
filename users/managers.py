@@ -19,6 +19,7 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
         extra_fields.setdefault("is_active", True)
+        extra_fields.setdefault("is_approved", True)
         if not password:
             raise ValueError("Superusers must have a password.")
         if extra_fields.get("is_staff") is not True:
