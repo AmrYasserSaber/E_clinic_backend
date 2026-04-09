@@ -25,12 +25,6 @@ except ModuleNotFoundError:
     pass
 
 
-def parse_bool(value: str | None, default: bool) -> bool:
-    if value is None:
-        return default
-    return value.strip().lower() in {"1", "true", "yes", "y", "on"}
-
-
 def parse_csv(value: str | None) -> list[str]:
     if not value:
         return []
@@ -44,7 +38,7 @@ def parse_csv(value: str | None) -> list[str]:
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-change-me")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = parse_bool(os.environ.get("DJANGO_DEBUG"), default=True)
+DEBUG = os.environ.get("DJANGO_DEBUG") == "True"
 
 ALLOWED_HOSTS = parse_csv(os.environ.get("DJANGO_ALLOWED_HOSTS"))
 
