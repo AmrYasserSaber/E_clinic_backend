@@ -41,7 +41,7 @@ class AdminUserListSerializer(RoleFieldMixin, serializers.ModelSerializer):
 
 class AdminUserCreateSerializer(serializers.ModelSerializer):
     role = serializers.ChoiceField(choices=list(ROLE_TO_GROUP.keys()))
-    password = serializers.CharField(write_only=True, required=False, min_length=8)
+    password = serializers.CharField(write_only=True, required=True, min_length=8)
 
     class Meta:
         model = User
@@ -64,7 +64,7 @@ class AdminUserCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data: dict) -> User:
         role = validated_data.pop("role")
-        password = validated_data.pop("password", "TempPass123")
+        password = validated_data.pop("password")
         user = User.objects.create_user(password=password, **validated_data)
 
         group = Group.objects.get(name=ROLE_TO_GROUP[role])
