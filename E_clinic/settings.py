@@ -49,6 +49,10 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
     "users.apps.UsersConfig",
+    "adminpanel.apps.AdminpanelConfig",
+    "analytics.apps.AnalyticsConfig",
+    "reports.apps.ReportsConfig",
+    "drf_spectacular",
 ]
 
 MIDDLEWARE = [
@@ -142,6 +146,13 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticated",
         "users.permissions.IsApproved",
     ],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "E_clinic API",
+    "DESCRIPTION": "Backend API documentation",
+    "VERSION": "1.0.0",
 }
 
 SIMPLE_JWT = {
