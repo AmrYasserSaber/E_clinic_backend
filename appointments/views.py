@@ -6,6 +6,7 @@ from itertools import groupby
 from django.db.models import Case, IntegerField, Q, Value, When
 from django.db.models.functions import Concat
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -269,6 +270,7 @@ class AppointmentRescheduleView(APIView):
 class DoctorMyScheduleView(APIView):
     permission_classes = [IsAuthenticated, IsApproved, IsDoctor]
 
+    @extend_schema(tags=["doctors"])
     def get(self, request):
         slots = (
             Slot.objects.filter(doctor=request.user)
@@ -291,6 +293,7 @@ class DoctorMyScheduleView(APIView):
 class DoctorMyQueueView(APIView):
     permission_classes = [IsAuthenticated, IsApproved, IsDoctor]
 
+    @extend_schema(tags=["doctors"])
     def get(self, request):
         date_param = request.query_params.get("date")
         if date_param:
@@ -322,6 +325,7 @@ class DoctorMyQueueView(APIView):
 class AppointmentConsultationCreateView(APIView):
     permission_classes = [IsAuthenticated, IsApproved, IsDoctor]
 
+    @extend_schema(tags=["doctors"])
     def post(self, request, pk: int):
         payload = ConsultationCreateSerializer(data=request.data)
         payload.is_valid(raise_exception=True)
@@ -336,4 +340,4 @@ class AppointmentConsultationCreateView(APIView):
         )
 
         serializer = AppointmentSerializer(appointment, context={"request": request})
-        return Response(serializer.data, status=200)
+        return Response(serializer.data, status=201)

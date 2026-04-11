@@ -205,7 +205,6 @@ def _lock_slot(slot_id: int) -> Slot:
 def _lock_appointment(appointment_id: int) -> Appointment:
 	appointment = (
 		Appointment.objects.select_for_update(nowait=False)
-		.select_related("slot", "patient", "doctor")
 		.filter(id=appointment_id)
 		.first()
 	)
