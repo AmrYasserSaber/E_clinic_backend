@@ -16,9 +16,29 @@ class TokenPair:
     access: str
     refresh: str
 
+
+class TokenRefreshRequestSerializer(serializers.Serializer):
+    refresh = serializers.CharField(help_text="Valid refresh token.")
+
+
+class TokenRefreshResponseSerializer(serializers.Serializer):
+    access = serializers.CharField(help_text="New access token.")
+    refresh = serializers.CharField(
+        required=False,
+        help_text="New refresh token when token rotation is enabled.",
+    )
+
+
+class MessageResponseSerializer(serializers.Serializer):
+    detail = serializers.CharField()
+
 class SignupSerializer(serializers.ModelSerializer):
-    role = serializers.ChoiceField(choices=["patient", "doctor", "receptionist"], write_only=True)
-    password = serializers.CharField(write_only=True, min_length=6)
+    role = serializers.ChoiceField(
+        choices=["patient", "doctor", "receptionist"],
+        write_only=True,
+        help_text="User role to assign at signup.",
+    )
+    password = serializers.CharField(write_only=True, min_length=6, help_text="Account password.")
 
     class Meta:
         model = User
@@ -56,8 +76,8 @@ class SignupSerializer(serializers.ModelSerializer):
 
 
 class LoginSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-    password = serializers.CharField(write_only=True)
+    email = serializers.EmailField(help_text="Registered email address.")
+    password = serializers.CharField(write_only=True, help_text="Account password.")
 
     def validate(self, attrs: dict) -> dict:
         email: str = attrs["email"]
@@ -92,4 +112,20 @@ class UserMeSerializer(serializers.ModelSerializer):
 
     def get_groups(self, obj: User) -> list[str]:
         return list(obj.groups.values_list("name", flat=True))
+
+
+class SignupResponseSerializer(serializers.Serializer):
+    user = UserMeSerializer()
+    access_token = serializers.CharField()
+    refresh_token = serializers.CharField()
+
+
+class LoginResponseSerializer(serializers.Serializer):
+    user = UserMeSerializer()
+    access_token = serializers.CharField()
+    refresh_token = serializers.CharField()
+
+
+class LogoutRequestSerializer(serializers.Serializer):
+    refresh_token = serializers.CharField(help_text="Refresh token to blacklist.")
 

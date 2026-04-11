@@ -6,25 +6,38 @@ from datetime import datetime
 from django.http import HttpResponse
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from users.permissions import IsAdmin
 
 
 class AppointmentExportCsvView(APIView):
     permission_classes = [IsAuthenticated, IsAdmin]
+
     @extend_schema(
+        tags=["Reports"],
+        summary="Export appointments CSV",
+        description="Exports appointments in CSV format filtered by optional date range.",
+        parameters=[
+            OpenApiParameter(
+                name="date_from",
+                type=str,
+                location=OpenApiParameter.QUERY,
+                description="Start date in YYYY-MM-DD format. Defaults to 'all'.",
+            ),
+            OpenApiParameter(
+                name="date_to",
+                type=str,
+                location=OpenApiParameter.QUERY,
+                description="End date in YYYY-MM-DD format. Defaults to 'all'.",
+            ),
+        ],
         responses={
-            200: {
-                "type": "object",
-                "properties": {
-                    "total_all_time": {"type": "integer"},
-                    "total_this_week": {"type": "integer"},
-                    "total_this_month": {"type": "integer"},
-                    "status_breakdown": {"type": "object"},
-                    "no_show_rate": {"type": "number"},
-                },
-            }
-        }
+            200: OpenApiResponse(
+                response=OpenApiTypes.BINARY,
+                description="CSV file stream.",
+            )
+        },
     )
     def get(self, request):
         date_from = request.query_params.get("date_from", "all")
