@@ -52,6 +52,8 @@ INSTALLED_APPS = [
     "adminpanel.apps.AdminpanelConfig",
     "analytics.apps.AnalyticsConfig",
     "reports.apps.ReportsConfig",
+    "patients.apps.PatientsConfig",
+    "appointments.apps.AppointmentsConfig",
     "drf_spectacular",
 ]
 
