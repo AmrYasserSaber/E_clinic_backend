@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from django.utils import timezone
 from rest_framework import serializers
 
 from appointments.models import Appointment, ConsultationRecord, PrescriptionItem
 from appointments.services import book_appointment
+from slots.models import Slot
 
 
 class UserBriefSerializer(serializers.Serializer):
@@ -21,10 +23,16 @@ class PrescriptionItemReadSerializer(serializers.ModelSerializer):
 
 class ConsultationRecordReadSerializer(serializers.ModelSerializer):
     prescription_items = PrescriptionItemReadSerializer(many=True, read_only=True)
+    requested_tests = serializers.SerializerMethodField()
 
     class Meta:
         model = ConsultationRecord
         fields = ["diagnosis", "notes", "requested_tests", "prescription_items"]
+
+    def get_requested_tests(self, obj: ConsultationRecord) -> list[str]:
+        if not obj.requested_tests:
+            return []
+        return [item for item in obj.requested_tests.split("\n") if item]
 
 
 class AppointmentBookingSerializer(serializers.Serializer):
@@ -95,3 +103,52 @@ class AppointmentDeclineSerializer(serializers.Serializer):
 class AppointmentRescheduleSerializer(serializers.Serializer):
     new_slot_id = serializers.IntegerField(required=True)
     reason = serializers.CharField(required=False, allow_blank=True)
+
+
+class DoctorSlotSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Slot
+        fields = ["id", "date", "start_time", "end_time", "duration_minutes", "is_available"]
+
+
+class DoctorQueueItemSerializer(serializers.ModelSerializer):
+    patient_full_name = serializers.SerializerMethodField()
+    waiting_time_minutes = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Appointment
+        fields = [
+            "id",
+            "patient_full_name",
+            "appointment_time",
+            "status",
+            "check_in_time",
+            "waiting_time_minutes",
+        ]
+
+    def get_patient_full_name(self, obj: Appointment) -> str:
+        return f"{obj.patient.first_name} {obj.patient.last_name}".strip()
+
+    def get_waiting_time_minutes(self, obj: Appointment) -> int | None:
+        if obj.status != "CHECKED_IN" or not obj.check_in_time:
+            return None
+        delta = timezone.now() - obj.check_in_time
+        return delta.seconds // 60
+
+
+class PrescriptionItemInputSerializer(serializers.Serializer):
+    drug = serializers.CharField()
+    dose = serializers.CharField()
+    duration = serializers.CharField()
+    instructions = serializers.CharField(required=False, allow_blank=True)
+
+
+class ConsultationCreateSerializer(serializers.Serializer):
+    diagnosis = serializers.CharField(required=True)
+    notes = serializers.CharField(required=False, allow_blank=True)
+    requested_tests = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+        default=list,
+    )
+    prescription_items = PrescriptionItemInputSerializer(many=True, required=False, default=list)

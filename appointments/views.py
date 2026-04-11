@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from datetime import date
+from itertools import groupby
 
-from django.db.models import Q, Value
+from django.db.models import Case, IntegerField, Q, Value, When
 from django.db.models.functions import Concat
+from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -15,6 +17,9 @@ from appointments.serializers import (
     AppointmentDeclineSerializer,
     AppointmentRescheduleSerializer,
     AppointmentSerializer,
+    ConsultationCreateSerializer,
+    DoctorQueueItemSerializer,
+    DoctorSlotSerializer,
     ReceptionistAppointmentSerializer,
 )
 from appointments.services import (
@@ -27,11 +32,13 @@ from appointments.services import (
     get_appointment_for_access_check,
     get_appointment_for_list_queryset,
     get_primary_role,
+    file_consultation,
     mark_no_show,
     reschedule_appointment,
     scope_queryset_for_user,
 )
-from users.permissions import IsApproved
+from slots.models import Slot
+from users.permissions import IsApproved, IsDoctor
 
 
 ORDERING_WHITELIST = {
@@ -257,3 +264,76 @@ class AppointmentRescheduleView(APIView):
         role = get_primary_role(request.user)
         serializer_class = _get_response_serializer(role)
         return Response(serializer_class(appointment, context={"request": request}).data, status=200)
+
+
+class DoctorMyScheduleView(APIView):
+    permission_classes = [IsAuthenticated, IsApproved, IsDoctor]
+
+    def get(self, request):
+        slots = (
+            Slot.objects.filter(doctor=request.user)
+            .order_by("date", "start_time", "id")
+        )
+
+        grouped_items = []
+        for slot_date, slot_group in groupby(slots, key=lambda item: item.date):
+            serialized_slots = DoctorSlotSerializer(slot_group, many=True).data
+            grouped_items.append(
+                {
+                    "date": slot_date,
+                    "slots": serialized_slots,
+                }
+            )
+
+        return Response({"items": grouped_items}, status=200)
+
+
+class DoctorMyQueueView(APIView):
+    permission_classes = [IsAuthenticated, IsApproved, IsDoctor]
+
+    def get(self, request):
+        date_param = request.query_params.get("date")
+        if date_param:
+            target_date = _parse_iso_date(date_param, "date")
+        else:
+            target_date = timezone.localdate()
+
+        queue_queryset = (
+            Appointment.objects.select_related("patient")
+            .filter(
+                doctor=request.user,
+                appointment_date=target_date,
+                status__in=[AppointmentStatus.CHECKED_IN, AppointmentStatus.CONFIRMED],
+            )
+            .annotate(
+                queue_priority=Case(
+                    When(status=AppointmentStatus.CHECKED_IN, then=Value(0)),
+                    default=Value(1),
+                    output_field=IntegerField(),
+                )
+            )
+            .order_by("queue_priority", "check_in_time", "appointment_time", "id")
+        )
+
+        serializer = DoctorQueueItemSerializer(queue_queryset, many=True)
+        return Response({"date": target_date, "items": serializer.data}, status=200)
+
+
+class AppointmentConsultationCreateView(APIView):
+    permission_classes = [IsAuthenticated, IsApproved, IsDoctor]
+
+    def post(self, request, pk: int):
+        payload = ConsultationCreateSerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+
+        appointment = file_consultation(
+            appointment_id=pk,
+            actor=request.user,
+            diagnosis=payload.validated_data["diagnosis"],
+            notes=payload.validated_data.get("notes", ""),
+            requested_tests=payload.validated_data.get("requested_tests", []),
+            prescription_items=payload.validated_data.get("prescription_items", []),
+        )
+
+        serializer = AppointmentSerializer(appointment, context={"request": request})
+        return Response(serializer.data, status=200)

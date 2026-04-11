@@ -15,6 +15,8 @@ from appointments.models import (
 	AppointmentAuditLog,
 	AppointmentStatus,
 	AuditAction,
+	ConsultationRecord,
+	PrescriptionItem,
 	RescheduleHistory,
 )
 from slots.models import Slot
@@ -577,6 +579,78 @@ def reschedule_appointment(*, appointment_id: int, actor, new_slot_id: int, reas
 			from_status=old_status,
 			to_status=appointment.status,
 			notes=reason.strip(),
+		)
+
+		return appointment
+
+
+def file_consultation(
+	*,
+	appointment_id: int,
+	actor,
+	diagnosis: str,
+	notes: str = "",
+	requested_tests: list[str] | None = None,
+	prescription_items: list[dict] | None = None,
+) -> Appointment:
+	if get_primary_role(actor) != "Doctor":
+		raise PermissionDenied("Only doctors can file consultations.")
+
+	requested_tests = requested_tests or []
+	prescription_items = prescription_items or []
+
+	with transaction.atomic():
+		appointment = _lock_appointment(appointment_id)
+
+		if appointment.doctor_id != actor.id:
+			raise PermissionDenied("You can only file consultations for your own appointments.")
+
+		if appointment.status != AppointmentStatus.CHECKED_IN:
+			raise ValidationError(
+				{"detail": "Consultation can only be filed for CHECKED_IN appointments."}
+			)
+
+		already_exists = (
+			ConsultationRecord.objects.select_for_update(nowait=False)
+			.filter(appointment=appointment)
+			.exists()
+		)
+		if already_exists:
+			raise ValidationError({"detail": "Consultation already filed"})
+
+		consultation = ConsultationRecord.objects.create(
+			appointment=appointment,
+			diagnosis=diagnosis,
+			notes=notes,
+			requested_tests="\n".join(test.strip() for test in requested_tests if test.strip()),
+			created_by=actor,
+		)
+
+		if prescription_items:
+			PrescriptionItem.objects.bulk_create(
+				[
+					PrescriptionItem(
+						consultation_record=consultation,
+						drug=item["drug"],
+						dose=item["dose"],
+						duration=item["duration"],
+						instructions=item.get("instructions", ""),
+					)
+					for item in prescription_items
+				]
+			)
+
+		old_status = appointment.status
+		appointment.status = AppointmentStatus.COMPLETED
+		appointment.save(update_fields=["status", "updated_at"])
+
+		_write_audit_log(
+			appointment=appointment,
+			actor=actor,
+			action=AuditAction.COMPLETED,
+			from_status=old_status,
+			to_status=AppointmentStatus.COMPLETED,
+			notes="Consultation filed and appointment completed.",
 		)
 
 		return appointment
