@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import datetime as dt
 from datetime import date
 from itertools import groupby
 
+from django.contrib.auth import get_user_model
 from django.db.models import Case, IntegerField, Q, Value, When
 from django.db.models.functions import Concat
 from django.utils import timezone
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -18,6 +20,7 @@ from appointments.serializers import (
     AppointmentDeclineSerializer,
     AppointmentRescheduleSerializer,
     AppointmentSerializer,
+    AvailableSlotSerializer,
     ConsultationCreateSerializer,
     DoctorQueueItemSerializer,
     DoctorSlotSerializer,
@@ -30,17 +33,19 @@ from appointments.services import (
     confirm_appointment,
     decline_appointment,
     ensure_object_access,
+    file_consultation,
     get_appointment_for_access_check,
     get_appointment_for_list_queryset,
     get_primary_role,
-    file_consultation,
     mark_no_show,
     reschedule_appointment,
     scope_queryset_for_user,
 )
+from appointments.slot_generation import iter_available_slots
 from slots.models import Slot
 from users.permissions import IsApproved, IsDoctor
 
+User = get_user_model()
 
 ORDERING_WHITELIST = {
     "appointment_date",
@@ -88,10 +93,14 @@ def _apply_query_filters(*, queryset, request, role: str):
         queryset = queryset.filter(status=normalized_status)
 
     if date_from:
-        queryset = queryset.filter(appointment_date__gte=_parse_iso_date(date_from, "date_from"))
+        queryset = queryset.filter(
+            appointment_date__gte=_parse_iso_date(date_from, "date_from")
+        )
 
     if date_to:
-        queryset = queryset.filter(appointment_date__lte=_parse_iso_date(date_to, "date_to"))
+        queryset = queryset.filter(
+            appointment_date__lte=_parse_iso_date(date_to, "date_to")
+        )
 
     if doctor_id is not None:
         if role == "Patient":
@@ -127,9 +136,7 @@ def _apply_query_filters(*, queryset, request, role: str):
         invalid_fields = [field for field in requested_fields if field not in ORDERING_WHITELIST]
         if invalid_fields:
             raise ValidationError(
-                {
-                    "ordering": f"Invalid ordering fields: {', '.join(invalid_fields)}."
-                }
+                {"ordering": f"Invalid ordering fields: {', '.join(invalid_fields)}."}
             )
         queryset = queryset.order_by(*requested_fields)
     else:
@@ -149,7 +156,6 @@ class AppointmentListCreateView(APIView):
             request=request,
             role=role,
         )
-
         serializer_class = _get_response_serializer(role)
         serializer = serializer_class(filtered_queryset, many=True, context={"request": request})
         return Response(serializer.data, status=200)
@@ -280,12 +286,7 @@ class DoctorMyScheduleView(APIView):
         grouped_items = []
         for slot_date, slot_group in groupby(slots, key=lambda item: item.date):
             serialized_slots = DoctorSlotSerializer(slot_group, many=True).data
-            grouped_items.append(
-                {
-                    "date": slot_date,
-                    "slots": serialized_slots,
-                }
-            )
+            grouped_items.append({"date": slot_date, "slots": serialized_slots})
 
         return Response({"items": grouped_items}, status=200)
 
@@ -341,3 +342,64 @@ class AppointmentConsultationCreateView(APIView):
 
         serializer = AppointmentSerializer(appointment, context={"request": request})
         return Response(serializer.data, status=201)
+
+
+class AvailableSlotsView(APIView):
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="doctor_id",
+                type=int,
+                location=OpenApiParameter.QUERY,
+                required=True,
+            ),
+            OpenApiParameter(
+                name="date",
+                type=str,
+                location=OpenApiParameter.QUERY,
+                required=True,
+                description="Calendar date (YYYY-MM-DD).",
+            ),
+        ],
+        responses={200: AvailableSlotSerializer(many=True)},
+    )
+    def get(self, request):
+        doctor_id_raw = request.query_params.get("doctor_id")
+        date_raw = request.query_params.get("date")
+        if (
+            doctor_id_raw is None
+            or date_raw is None
+            or str(doctor_id_raw).strip() == ""
+            or str(date_raw).strip() == ""
+        ):
+            return Response({"detail": "doctor_id and date are required."}, status=400)
+        try:
+            doctor_id = int(doctor_id_raw)
+        except (TypeError, ValueError):
+            return Response({"detail": "doctor_id must be an integer."}, status=400)
+        try:
+            target_date = dt.date.fromisoformat(date_raw)
+        except ValueError:
+            return Response({"detail": "date must be YYYY-MM-DD."}, status=400)
+
+        if target_date < timezone.localdate():
+            return Response({"detail": "Cannot list slots for past dates."}, status=400)
+
+        if not User.objects.filter(pk=doctor_id, groups__name="Doctor").exists():
+            return Response({"detail": "Doctor not found."}, status=404)
+
+        slots = iter_available_slots(doctor_id, target_date)
+        rows = []
+        for s in slots:
+            ls = timezone.localtime(s["start"])
+            le = timezone.localtime(s["end"])
+            rows.append(
+                {
+                    "doctorId": s["doctor_id"],
+                    "date": s["date"],
+                    "startTime": ls.time().replace(microsecond=0),
+                    "endTime": le.time().replace(microsecond=0),
+                }
+            )
+        serializer = AvailableSlotSerializer(rows, many=True)
+        return Response(serializer.data, status=200)

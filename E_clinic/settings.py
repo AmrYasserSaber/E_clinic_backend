@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     "analytics.apps.AnalyticsConfig",
     "reports.apps.ReportsConfig",
     "slots.apps.SlotsConfig",
+    "patients.apps.PatientsConfig",
     "appointments.apps.AppointmentsConfig",
     "drf_spectacular",
 ]

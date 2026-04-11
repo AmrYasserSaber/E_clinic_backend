@@ -26,4 +26,5 @@ urlpatterns = [
 	path("appointments/<int:pk>/no-show/", AppointmentNoShowView.as_view(), name="appointments-no-show"),
 	path("appointments/<int:pk>/reschedule/", AppointmentRescheduleView.as_view(), name="appointments-reschedule"),
 	path("appointments/<int:pk>/consultation/", AppointmentConsultationCreateView.as_view(), name="appointments-consultation"),
+  path("slots/", AvailableSlotsView.as_view(), name="available-slots"),
 ]

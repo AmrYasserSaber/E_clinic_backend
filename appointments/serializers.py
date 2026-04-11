@@ -152,3 +152,10 @@ class ConsultationCreateSerializer(serializers.Serializer):
         default=list,
     )
     prescription_items = PrescriptionItemInputSerializer(many=True, required=False, default=list)
+
+
+class AvailableSlotSerializer(serializers.Serializer):
+    doctorId = serializers.IntegerField()
+    date = serializers.DateField()
+    startTime = serializers.TimeField()
+    endTime = serializers.TimeField()
