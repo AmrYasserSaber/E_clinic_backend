@@ -12,7 +12,6 @@ class PatientProfileReadSerializer(serializers.ModelSerializer):
     class Meta:
         model = PatientProfile
         fields = [
-            "blood_type",
             "emergency_contact_name",
             "emergency_contact_phone",
             "address",
@@ -63,7 +62,6 @@ class PatientProfilePatchSerializer(serializers.ModelSerializer):
     class Meta:
         model = PatientProfile
         fields = [
-            "blood_type",
             "emergency_contact_name",
             "emergency_contact_phone",
             "address",

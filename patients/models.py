@@ -15,26 +15,10 @@ def _validate_optional_egyptian_phone(value: str | None) -> None:
 
 
 class PatientProfile(models.Model):
-    class BloodType(models.TextChoices):
-        A_POS = "A+", "A+"
-        A_NEG = "A-", "A-"
-        B_POS = "B+", "B+"
-        B_NEG = "B-", "B-"
-        AB_POS = "AB+", "AB+"
-        AB_NEG = "AB-", "AB-"
-        O_POS = "O+", "O+"
-        O_NEG = "O-", "O-"
-        UNKNOWN = "unknown", _("Unknown")
-
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="patient_profile",
-    )
-    blood_type = models.CharField(
-        max_length=8,
-        choices=BloodType,
-        blank=True,
     )
     emergency_contact_name = models.CharField(max_length=150, blank=True)
     emergency_contact_phone = models.CharField(

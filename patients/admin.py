@@ -7,7 +7,7 @@ from patients.models import PatientProfile
 
 @admin.register(PatientProfile)
 class PatientProfileAdmin(admin.ModelAdmin):
-    list_display = ("user", "blood_type", "emergency_contact_name", "updated_at")
+    list_display = ("user", "emergency_contact_name", "updated_at")
     search_fields = (
         "user__email",
         "user__first_name",

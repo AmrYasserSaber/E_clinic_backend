@@ -33,18 +33,14 @@ def _intervals_overlap(
 ) -> bool:
     return a_start < b_end and b_start < a_end
 
-
+# TODO: need review - this is a bit complex and may have edge cases. Consider simplifying by just checking if the slot start time overlaps with any existing appointment, since we assume fixed session durations.
 def _blocking_appointments_for_day(
     doctor_id: int, day: dt.date, tz
 ) -> list[Appointment]:
-    day_start = timezone.make_aware(dt.datetime.combine(day, dt.time.min), tz)
-    next_day = day + dt.timedelta(days=1)
-    day_end = timezone.make_aware(dt.datetime.combine(next_day, dt.time.min), tz)
     return list(
         Appointment.objects.filter(
             doctor_id=doctor_id,
-            starts_at__lt=day_end,
-            ends_at__gt=day_start,
+            date=day,
         ).exclude(
             status__in=[Appointment.Status.CANCELLED, Appointment.Status.NO_SHOW],
         )
@@ -93,7 +89,12 @@ def filter_booked_and_past(
         if target_date == now.date() and slot_start < now:
             continue
         if any(
-            _intervals_overlap(slot_start, slot_end, a.starts_at, a.ends_at)
+            _intervals_overlap(
+                slot_start,
+                slot_end,
+                _combine(a.date, a.time),
+                _combine(a.date, a.time) + dt.timedelta(minutes=a.session_duration),
+            )
             for a in blocking
         ):
             continue
