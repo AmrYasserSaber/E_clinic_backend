@@ -19,15 +19,15 @@ class DoctorSchedule(models.Model):
     )
     start_time = models.TimeField()
     end_time = models.TimeField()
-+   session_duration_minutes = models.IntegerField(
-+        validators=[MinValueValidator(1)],
-+        help_text="Duration of each session in minutes",
-+    )
-+   buffer_minutes = models.IntegerField(
-+        default=5,
-+        validators=[MinValueValidator(0)],
-+        help_text="Buffer time between sessions in minutes",
-+    )
+    session_duration_minutes = models.IntegerField(
+        validators=[MinValueValidator(1)],
+        help_text="Duration of each session in minutes",
+    )
+    buffer_minutes = models.IntegerField(
+        default=5,
+        validators=[MinValueValidator(0)],
+        help_text="Buffer time between sessions in minutes",
+    )
 
     class Meta:
         unique_together = ("doctor", "day_of_week")
