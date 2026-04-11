@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
     "users.apps.UsersConfig",
+    "schedules.apps.SchedulesConfig",
     "adminpanel.apps.AdminpanelConfig",
     "analytics.apps.AnalyticsConfig",
     "reports.apps.ReportsConfig",
