@@ -34,7 +34,9 @@ def _intervals_overlap(
     return a_start < b_end and b_start < a_end
 
 
-def _blocking_appointments_for_day(doctor_id: int, day: dt.date, tz) -> list[Appointment]:
+def _blocking_appointments_for_day(
+    doctor_id: int, day: dt.date, tz
+) -> list[Appointment]:
     day_start = timezone.make_aware(dt.datetime.combine(day, dt.time.min), tz)
     next_day = day + dt.timedelta(days=1)
     day_end = timezone.make_aware(dt.datetime.combine(next_day, dt.time.min), tz)
@@ -55,9 +57,20 @@ def iter_candidate_slots(
 ) -> list[tuple[dt.datetime, dt.datetime]]:
     window_start = _combine(target_date, rules.start_time)
     window_end = _combine(target_date, rules.end_time)
+
+    if rules.session_duration <= dt.timedelta(0):
+        raise ValueError("session_duration must be > 0")
+    if rules.buffer < dt.timedelta(0):
+        raise ValueError("buffer must be >= 0")
+
     step = rules.session_duration + rules.buffer
+
+    if step <= dt.timedelta(0):
+        raise ValueError("session_duration + buffer must be > 0")
+
     out: list[tuple[dt.datetime, dt.datetime]] = []
     t = window_start
+
     while True:
         effective_end = t + rules.session_duration
         if effective_end > window_end:
@@ -80,7 +93,8 @@ def filter_booked_and_past(
         if target_date == now.date() and slot_start < now:
             continue
         if any(
-            _intervals_overlap(slot_start, slot_end, a.starts_at, a.ends_at) for a in blocking
+            _intervals_overlap(slot_start, slot_end, a.starts_at, a.ends_at)
+            for a in blocking
         ):
             continue
         result.append((slot_start, slot_end))
