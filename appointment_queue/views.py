@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from django.core.exceptions import FieldError
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.permissions import IsAuthenticated
@@ -52,10 +51,7 @@ class QueueListView(APIView):
         if doctor_id:
             queryset = queryset.filter(doctor_id=doctor_id)
 
-        try:
-            queryset = queryset.select_related("patient__user")
-        except FieldError:
-            queryset = queryset.select_related("patient")
+        queryset = queryset.select_related("patient", "doctor")
 
         queue_rows = list(
             queryset.order_by(
