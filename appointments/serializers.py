@@ -6,6 +6,13 @@ from appointments.models import Appointment, ConsultationRecord, PrescriptionIte
 from appointments.services import book_appointment
 
 
+class UserBriefSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    first_name = serializers.CharField()
+    last_name = serializers.CharField()
+    email = serializers.EmailField()
+
+
 class PrescriptionItemReadSerializer(serializers.ModelSerializer):
     class Meta:
         model = PrescriptionItem
@@ -46,8 +53,9 @@ class AppointmentBookingSerializer(serializers.Serializer):
         return attrs
 
 
-class AppointmentSerializer(serializers.ModelSerializer):
-    consultation_summary = ConsultationRecordReadSerializer(source="consultation_record", read_only=True)
+class BaseAppointmentSerializer(serializers.ModelSerializer):
+    patient_info = UserBriefSerializer(source="patient", read_only=True)
+    doctor_info = UserBriefSerializer(source="doctor", read_only=True)
 
     class Meta:
         model = Appointment
@@ -61,7 +69,29 @@ class AppointmentSerializer(serializers.ModelSerializer):
             "session_duration_minutes",
             "status",
             "check_in_time",
-            "consultation_summary",
+            "patient_info",
+            "doctor_info",
             "created_at",
             "updated_at",
         ]
+
+
+class AppointmentSerializer(BaseAppointmentSerializer):
+    consultation_summary = ConsultationRecordReadSerializer(source="consultation_record", read_only=True)
+
+    class Meta:
+        model = Appointment
+        fields = BaseAppointmentSerializer.Meta.fields + ["consultation_summary"]
+
+
+class ReceptionistAppointmentSerializer(BaseAppointmentSerializer):
+    pass
+
+
+class AppointmentDeclineSerializer(serializers.Serializer):
+    reason = serializers.CharField(required=False, allow_blank=True)
+
+
+class AppointmentRescheduleSerializer(serializers.Serializer):
+    new_slot_id = serializers.IntegerField(required=True)
+    reason = serializers.CharField(required=False, allow_blank=True)
