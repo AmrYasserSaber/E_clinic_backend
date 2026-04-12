@@ -133,7 +133,7 @@ class DoctorQueueItemSerializer(serializers.ModelSerializer):
         if obj.status != "CHECKED_IN" or not obj.check_in_time:
             return None
         delta = timezone.now() - obj.check_in_time
-        return delta.seconds // 60
+        return int(delta.total_seconds() // 60)
 
 
 class PrescriptionItemInputSerializer(serializers.Serializer):
