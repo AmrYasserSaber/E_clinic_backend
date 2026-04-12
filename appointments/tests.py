@@ -723,3 +723,51 @@ class AppointmentApiTests(APITestCase):
         queue_item = next(item for item in response.data["items"] if item["id"] == checked_in_appointment.id)
         self.assertIsNotNone(queue_item["waiting_time_minutes"])
         self.assertIsInstance(queue_item["waiting_time_minutes"], int)
+
+    # AVAILABLE SLOTS (schedule-driven)
+    def test_available_slots_returns_200_and_excludes_booked_window(self):
+        self._create_appointment(
+            patient=self.patient,
+            doctor=self.doctor,
+            appointment_date=self.tomorrow,
+            appointment_time=time(9, 35),
+            status_value=AppointmentStatus.REQUESTED,
+        )
+        response = self.patient_client.get(
+            "/api/slots/",
+            {"doctor_id": self.doctor.id, "date": self.tomorrow.isoformat()},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        start_times = [str(row["startTime"]).split(".")[0] for row in response.data]
+        self.assertIn("09:00:00", start_times)
+        self.assertNotIn("09:35:00", start_times)
+
+    def test_available_slots_includes_slot_after_cancelled_booking(self):
+        self._create_appointment(
+            patient=self.patient,
+            doctor=self.doctor,
+            appointment_date=self.tomorrow,
+            appointment_time=time(9, 35),
+            status_value=AppointmentStatus.CANCELLED,
+        )
+        response = self.patient_client.get(
+            "/api/slots/",
+            {"doctor_id": self.doctor.id, "date": self.tomorrow.isoformat()},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        start_times = [str(row["startTime"]).split(".")[0] for row in response.data]
+        self.assertIn("09:35:00", start_times)
+
+    def test_booking_with_frontend_date_and_time_payload_returns_201(self):
+        response = self.patient_client.post(
+            "/api/appointments/",
+            {
+                "doctor_id": self.doctor.id,
+                "date": self.tomorrow.isoformat(),
+                "time": "12:00:00",
+                "reason": "Consultation",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["status"], AppointmentStatus.REQUESTED)

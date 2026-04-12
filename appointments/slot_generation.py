@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime as dt
 from typing import TypedDict
 
+from django.conf import settings
 from django.utils import timezone
 
 from appointments.models import Appointment
@@ -11,6 +12,7 @@ from appointments.schedule_stubs import (
     get_working_window_and_rules,
     has_schedule_exception,
 )
+from appointments.services import EXCLUDED_CONFLICT_STATUSES
 
 
 class SlotDict(TypedDict):
@@ -25,25 +27,12 @@ def _combine(d: dt.date, t: dt.time) -> dt.datetime:
     return timezone.make_aware(naive, timezone.get_current_timezone())
 
 
-def _intervals_overlap(
-    a_start: dt.datetime,
-    a_end: dt.datetime,
-    b_start: dt.datetime,
-    b_end: dt.datetime,
-) -> bool:
-    return a_start < b_end and b_start < a_end
-
-# TODO: need review - this is a bit complex and may have edge cases. Consider simplifying by just checking if the slot start time overlaps with any existing appointment, since we assume fixed session durations.
-def _blocking_appointments_for_day(
-    doctor_id: int, day: dt.date, tz
-) -> list[Appointment]:
+def _blocking_appointments_for_day(doctor_id: int, day: dt.date) -> list[Appointment]:
     return list(
         Appointment.objects.filter(
             doctor_id=doctor_id,
-            date=day,
-        ).exclude(
-            status__in=[Appointment.Status.CANCELLED, Appointment.Status.NO_SHOW],
-        )
+            appointment_date=day,
+        ).exclude(status__in=EXCLUDED_CONFLICT_STATUSES)
     )
 
 
@@ -81,22 +70,25 @@ def filter_booked_and_past(
     target_date: dt.date,
     candidates: list[tuple[dt.datetime, dt.datetime]],
 ) -> list[tuple[dt.datetime, dt.datetime]]:
-    tz = timezone.get_current_timezone()
     now = timezone.now()
-    blocking = _blocking_appointments_for_day(doctor_id, target_date, tz)
+    buffer_minutes = int(getattr(settings, "APPOINTMENT_BUFFER_MINUTES", 5))
+    buf = dt.timedelta(minutes=buffer_minutes)
+    blocking = _blocking_appointments_for_day(doctor_id, target_date)
     result: list[tuple[dt.datetime, dt.datetime]] = []
     for slot_start, slot_end in candidates:
         if target_date == now.date() and slot_start < now:
             continue
-        if any(
-            _intervals_overlap(
-                slot_start,
-                slot_end,
-                _combine(a.date, a.time),
-                _combine(a.date, a.time) + dt.timedelta(minutes=a.session_duration),
-            )
-            for a in blocking
-        ):
+        # Match _doctor_has_time_conflict: requested window is session ± buffer; existing is raw session.
+        req_start = slot_start - buf
+        req_end = slot_end + buf
+        blocked = False
+        for a in blocking:
+            ex_s = _combine(a.appointment_date, a.appointment_time)
+            ex_e = ex_s + dt.timedelta(minutes=a.session_duration_minutes)
+            if ex_s < req_end and ex_e > req_start:
+                blocked = True
+                break
+        if blocked:
             continue
         result.append((slot_start, slot_end))
     result.sort(key=lambda x: x[0])

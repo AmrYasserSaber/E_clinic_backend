@@ -289,6 +289,8 @@ def book_appointment(
 			doctor=doctor,
 			appointment_date=appointment_date,
 			appointment_time=appointment_time,
+			duration_minutes=session_duration_minutes,
+			buffer_minutes=buffer_minutes,
 		):
 			raise BookingConflictError("Doctor is already booked for this date and time.")
 
@@ -539,6 +541,8 @@ def reschedule_appointment(*, appointment_id: int, actor, new_slot_id: int, reas
 			doctor=new_slot.doctor,
 			appointment_date=new_slot.date,
 			appointment_time=new_slot.start_time,
+			duration_minutes=new_slot.duration_minutes,
+			buffer_minutes=buffer_minutes,
 			exclude_appointment_id=appointment.id,
 		):
 			raise BookingConflictError("Doctor is already booked for this date and time.")

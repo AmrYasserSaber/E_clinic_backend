@@ -40,14 +40,16 @@ class AppointmentBookingSerializer(serializers.Serializer):
     doctor_id = serializers.IntegerField(required=False)
     appointment_date = serializers.DateField(required=False)
     appointment_time = serializers.TimeField(required=False)
+    date = serializers.DateField(required=False)
+    time = serializers.TimeField(required=False)
     reason = serializers.CharField(required=False, allow_blank=True)
     session_duration_minutes = serializers.IntegerField(required=False, min_value=1, default=30)
 
-    def create(self, validated_data: dict) -> Appointment:
-        patient = validated_data.pop("patient")
-        return book_appointment(patient=patient, **validated_data)
-
     def validate(self, attrs: dict) -> dict:
+        if attrs.get("appointment_date") is None and attrs.get("date") is not None:
+            attrs["appointment_date"] = attrs["date"]
+        if attrs.get("appointment_time") is None and attrs.get("time") is not None:
+            attrs["appointment_time"] = attrs["time"]
         if attrs.get("slot_id") is None:
             missing_fields = [
                 field_name
@@ -60,6 +62,12 @@ class AppointmentBookingSerializer(serializers.Serializer):
                     f"Missing required fields when slot_id is not provided: {missing_fields_str}."
                 )
         return attrs
+
+    def create(self, validated_data: dict) -> Appointment:
+        validated_data.pop("date", None)
+        validated_data.pop("time", None)
+        patient = validated_data.pop("patient")
+        return book_appointment(patient=patient, **validated_data)
 
 
 class BaseAppointmentSerializer(serializers.ModelSerializer):
