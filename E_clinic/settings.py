@@ -118,6 +118,8 @@ DEFAULT_FROM_EMAIL = env(
     default=EMAIL_HOST_USER or "webmaster@localhost",
 )
 
+FRONTEND_BASE_URL = env("FRONTEND_BASE_URL", default="http://localhost:4200")
+
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
