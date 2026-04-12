@@ -155,22 +155,37 @@ def _doctor_has_time_conflict(
 	doctor,
 	appointment_date,
 	appointment_time,
+	duration_minutes: int,
+	buffer_minutes: int,
 	exclude_appointment_id: int | None = None,
 ) -> bool:
-	queryset = (
+	requested_window_start, requested_window_end = _build_appointment_window(
+		appointment_date=appointment_date,
+		appointment_time=appointment_time,
+		duration_minutes=duration_minutes,
+		buffer_minutes=buffer_minutes,
+	)
+
+	doctor_same_day_appointments = (
 		Appointment.objects.select_for_update(nowait=False)
 		.filter(
 			doctor=doctor,
 			appointment_date=appointment_date,
-			appointment_time=appointment_time,
 		)
 		.exclude(status__in=EXCLUDED_CONFLICT_STATUSES)
+		.only("id", "appointment_time", "session_duration_minutes")
 	)
 	if exclude_appointment_id is not None:
-		queryset = queryset.exclude(id=exclude_appointment_id)
-	return queryset.exists()
+		doctor_same_day_appointments = doctor_same_day_appointments.exclude(id=exclude_appointment_id)
 
+	for existing_appointment in doctor_same_day_appointments:
+		existing_start = datetime.combine(appointment_date, existing_appointment.appointment_time)
+		existing_end = existing_start + timedelta(minutes=existing_appointment.session_duration_minutes)
 
+		if existing_start < requested_window_end and existing_end > requested_window_start:
+			return True
+
+	return False
 def _write_audit_log(
 	*,
 	appointment: Appointment,
