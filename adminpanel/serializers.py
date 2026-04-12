@@ -32,6 +32,7 @@ class AdminUserListSerializer(RoleFieldMixin, serializers.ModelSerializer):
             "first_name",
             "last_name",
             "phone_number",
+            "specialty",
             "date_of_birth",
             "is_active",
             "is_approved",
@@ -51,6 +52,7 @@ class AdminUserCreateSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "phone_number",
+            "specialty",
             "date_of_birth",
             "is_active",
             "is_approved",
@@ -87,6 +89,7 @@ class AdminUserUpdateSerializer(serializers.ModelSerializer):
             "last_name",
             "email",
             "phone_number",
+            "specialty",
             "date_of_birth",
             "is_active",
             "is_approved",
@@ -109,6 +112,9 @@ class AdminUserUpdateSerializer(serializers.ModelSerializer):
         if role:
             group = Group.objects.get(name=ROLE_TO_GROUP[role])
             instance.groups.set([group])
+            if role == "patient" and not instance.is_approved:
+                instance.is_approved = True
+                instance.save(update_fields=["is_approved"])
 
         return instance
 
