@@ -8,6 +8,7 @@ from appointments.views import (
     AppointmentDeclineView,
     AppointmentDetailView,
     AppointmentListCreateView,
+	AvailableSlotsView,
     DoctorMyQueueView,
     DoctorMyScheduleView,
     AppointmentNoShowView,
