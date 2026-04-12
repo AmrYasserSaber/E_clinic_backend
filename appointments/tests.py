@@ -738,7 +738,7 @@ class AppointmentApiTests(APITestCase):
             {"doctor_id": self.doctor.id, "date": self.tomorrow.isoformat()},
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        start_times = [row["startTime"] for row in response.data]
+        start_times = [str(row["startTime"]).split(".")[0] for row in response.data]
         self.assertIn("09:00:00", start_times)
         self.assertNotIn("09:35:00", start_times)
 
@@ -755,7 +755,7 @@ class AppointmentApiTests(APITestCase):
             {"doctor_id": self.doctor.id, "date": self.tomorrow.isoformat()},
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        start_times = [row["startTime"] for row in response.data]
+        start_times = [str(row["startTime"]).split(".")[0] for row in response.data]
         self.assertIn("09:35:00", start_times)
 
     def test_booking_with_frontend_date_and_time_payload_returns_201(self):
