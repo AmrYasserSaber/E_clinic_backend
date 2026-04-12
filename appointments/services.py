@@ -8,7 +8,7 @@ from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 
 from appointments.models import (
 	Appointment,
@@ -224,7 +224,7 @@ def _lock_appointment(appointment_id: int) -> Appointment:
 		.first()
 	)
 	if appointment is None:
-		raise ValidationError({"detail": _("Appointment not found.")})
+		raise NotFound({"detail": _("Appointment not found.")})
 	return appointment
 
 
