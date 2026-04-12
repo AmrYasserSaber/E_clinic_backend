@@ -36,7 +36,13 @@ class AppointmentExportCsvView(APIView):
             OpenApiParameter("date_from", str, OpenApiParameter.QUERY, description="Start date in YYYY-MM-DD format."),
             OpenApiParameter("date_to", str, OpenApiParameter.QUERY, description="End date in YYYY-MM-DD format."),
             OpenApiParameter("doctor_id", int, OpenApiParameter.QUERY, description="Filter by doctor ID."),
-            OpenApiParameter("status", str, OpenApiParameter.QUERY, description="Filter by appointment status."),
+            OpenApiParameter(
+                "status",
+                str,
+                OpenApiParameter.QUERY,
+                many=True,
+                description="Filter by appointment status. Repeat query param to provide multiple statuses.",
+            ),
         ],
         responses={200: None, 400: MessageResponseSerializer, 403: MessageResponseSerializer},
     )
@@ -69,7 +75,11 @@ class AppointmentExportCsvView(APIView):
                 raise ValidationError({"doctor_id": "doctor_id must be an integer."}) from exc
 
         if status_values:
-            normalized = [value.upper() for value in status_values if value]
+            normalized = [value.strip().upper() for value in status_values if value.strip()]
+            if not normalized:
+                raise ValidationError(
+                    {"status": "At least one non-empty status value is required when status is provided."}
+                )
             valid_statuses = {choice for choice, _ in AppointmentStatus.choices}
             invalid = [value for value in normalized if value not in valid_statuses]
             if invalid:
