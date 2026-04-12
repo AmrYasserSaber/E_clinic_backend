@@ -7,7 +7,7 @@ from django.contrib.auth import authenticate, get_user_model, password_validatio
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import AuthenticationFailed, PermissionDenied
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.settings import api_settings as jwt_api_settings
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -146,12 +146,23 @@ class ApprovalAwareTokenRefreshSerializer(TokenRefreshSerializer):
     def validate(self, attrs: dict) -> dict:
         refresh = self.token_class(attrs["refresh"])
         user_id = refresh.payload.get(jwt_api_settings.USER_ID_CLAIM, None)
-        if user_id is not None:
-            user = get_user_model().objects.get(
+        if user_id is None:
+            raise AuthenticationFailed(
+                detail="Invalid or malformed refresh token.",
+                code="invalid_token",
+            )
+        user_model = get_user_model()
+        try:
+            user = user_model.objects.get(
                 **{jwt_api_settings.USER_ID_FIELD: user_id}
             )
-            if not IsApproved.may_receive_tokens(user):
-                raise PermissionDenied(detail=IsApproved.message)
+        except user_model.DoesNotExist:
+            raise AuthenticationFailed(
+                detail="No active account found for the given token.",
+                code="no_active_account",
+            )
+        if not IsApproved.may_receive_tokens(user):
+            raise PermissionDenied(detail=IsApproved.message)
         return super().validate(attrs)
 
 
