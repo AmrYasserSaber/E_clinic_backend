@@ -8,18 +8,20 @@ class IsApproved(BasePermission):
 
     APPROVAL_REQUIRED_GROUPS = {"Doctor", "Receptionist"}
 
+    @classmethod
+    def may_receive_tokens(cls, user) -> bool:
+        requires_approval = user.groups.filter(
+            name__in=cls.APPROVAL_REQUIRED_GROUPS
+        ).exists()
+        if not requires_approval:
+            return True
+        return bool(getattr(user, "is_approved", False))
+
     def has_permission(self, request, view) -> bool:
         user = request.user
         if not user or not user.is_authenticated:
             return True
-
-        requires_approval = user.groups.filter(
-            name__in=self.APPROVAL_REQUIRED_GROUPS
-        ).exists()
-        if not requires_approval:
-            return True
-
-        return bool(getattr(user, "is_approved", False))
+        return self.may_receive_tokens(user)
 
 
 class GroupPermission(BasePermission):
