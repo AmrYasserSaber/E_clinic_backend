@@ -44,6 +44,7 @@ class Appointment(models.Model):
     )
     appointment_date = models.DateField()
     appointment_time = models.TimeField()
+    reason = models.TextField(blank=True)
     session_duration_minutes = models.PositiveSmallIntegerField(default=30)
     status = models.CharField(
         max_length=20,

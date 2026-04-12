@@ -40,6 +40,7 @@ class AppointmentBookingSerializer(serializers.Serializer):
     doctor_id = serializers.IntegerField(required=False)
     appointment_date = serializers.DateField(required=False)
     appointment_time = serializers.TimeField(required=False)
+    reason = serializers.CharField(required=False, allow_blank=True)
     session_duration_minutes = serializers.IntegerField(required=False, min_value=1, default=30)
 
     def create(self, validated_data: dict) -> Appointment:
@@ -74,6 +75,7 @@ class BaseAppointmentSerializer(serializers.ModelSerializer):
             "slot",
             "appointment_date",
             "appointment_time",
+            "reason",
             "session_duration_minutes",
             "status",
             "check_in_time",

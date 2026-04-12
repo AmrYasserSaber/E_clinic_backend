@@ -27,6 +27,7 @@ class User(AbstractUser):
         max_length=11,
         validators=[RegexValidator(regex=EGYPTIAN_PHONE_REGEX, message=_("Invalid phone number."))],
     )
+    specialty = models.CharField(max_length=255, blank=True)
     date_of_birth = models.DateField(validators=[validate_date_of_birth])
     is_approved = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)

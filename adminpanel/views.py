@@ -3,6 +3,7 @@ from __future__ import annotations
 from django.db.models import Q
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
@@ -43,15 +44,18 @@ from .serializers import (
         request=AdminUserUpdateSerializer,
         responses={200: AdminUserListSerializer, 400: MessageResponseSerializer},
     ),
-    destroy=extend_schema(
-        tags=["Admin Users"],
-        summary="Delete user",
-        responses={204: None, 404: MessageResponseSerializer},
-    ),
 )
 class AdminUserViewSet(viewsets.ModelViewSet):
+    http_method_names = ["get", "post", "patch", "put", "head", "options"]
     permission_classes = [IsAuthenticated, IsAdmin]
     queryset = User.objects.all().prefetch_related("groups")
+    
+    class AdminUserPagination(PageNumberPagination):
+        page_size = 20
+        page_size_query_param = "page_size"
+        max_page_size = 100
+
+    pagination_class = AdminUserPagination
 
     def get_serializer_class(self):
         if self.action == "create":
@@ -104,6 +108,18 @@ class AdminUserViewSet(viewsets.ModelViewSet):
                 type=bool,
                 location=OpenApiParameter.QUERY,
                 description="Filter by active status.",
+            ),
+            OpenApiParameter(
+                name="page",
+                type=int,
+                location=OpenApiParameter.QUERY,
+                description="Page number.",
+            ),
+            OpenApiParameter(
+                name="page_size",
+                type=int,
+                location=OpenApiParameter.QUERY,
+                description="Items per page (max 100).",
             ),
         ],
         responses={200: AdminUserListSerializer(many=True)},

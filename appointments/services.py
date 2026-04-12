@@ -242,6 +242,7 @@ def book_appointment(
 	doctor_id: int | None = None,
 	appointment_date=None,
 	appointment_time=None,
+	reason: str = "",
 	session_duration_minutes: int = 30,
 ) -> Appointment:
 	buffer_minutes = int(getattr(settings, "APPOINTMENT_BUFFER_MINUTES", 5))
@@ -307,6 +308,7 @@ def book_appointment(
 				slot=slot,
 				appointment_date=appointment_date,
 				appointment_time=appointment_time,
+				reason=reason.strip(),
 				session_duration_minutes=session_duration_minutes,
 				status=AppointmentStatus.REQUESTED,
 			)
