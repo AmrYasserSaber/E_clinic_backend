@@ -3,13 +3,17 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 
-from django.contrib.auth import authenticate, password_validation
+from django.contrib.auth import authenticate, get_user_model, password_validation
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
+from rest_framework.exceptions import AuthenticationFailed, PermissionDenied
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+from rest_framework_simplejwt.settings import api_settings as jwt_api_settings
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from users.models import User
+from users.permissions import IsApproved
 
 @dataclass(frozen=True)
 class TokenPair:
@@ -88,6 +92,8 @@ class LoginSerializer(serializers.Serializer):
         if not user.is_active:
             raise serializers.ValidationError("User account is disabled.")
         self.authenticated_user = user
+        if not IsApproved.may_receive_tokens(user):
+            raise PermissionDenied(detail=IsApproved.message)
         refresh = RefreshToken.for_user(user)
         return {
             "access_token": str(refresh.access_token),
@@ -116,8 +122,48 @@ class UserMeSerializer(serializers.ModelSerializer):
 
 class SignupResponseSerializer(serializers.Serializer):
     user = UserMeSerializer()
-    access_token = serializers.CharField()
-    refresh_token = serializers.CharField()
+    access_token = serializers.CharField(
+        required=False,
+        allow_null=True,
+        help_text="Present when the account may receive JWTs",
+    )
+    refresh_token = serializers.CharField(
+        required=False,
+        allow_null=True,
+        help_text="Present when the account may receive JWTs",
+    )
+    detail = serializers.CharField(
+        required=False,
+        help_text="Present when signup succeeded but JWTs are withheld pending approval.",
+    )
+    is_approved = serializers.BooleanField(
+        required=False,
+        help_text="False when doctor/receptionist must wait for admin approval.",
+    )
+
+
+class ApprovalAwareTokenRefreshSerializer(TokenRefreshSerializer):
+    def validate(self, attrs: dict) -> dict:
+        refresh = self.token_class(attrs["refresh"])
+        user_id = refresh.payload.get(jwt_api_settings.USER_ID_CLAIM, None)
+        if user_id is None:
+            raise AuthenticationFailed(
+                detail="Invalid or malformed refresh token.",
+                code="invalid_token",
+            )
+        user_model = get_user_model()
+        try:
+            user = user_model.objects.get(
+                **{jwt_api_settings.USER_ID_FIELD: user_id}
+            )
+        except user_model.DoesNotExist:
+            raise AuthenticationFailed(
+                detail="No active account found for the given token.",
+                code="no_active_account",
+            )
+        if not IsApproved.may_receive_tokens(user):
+            raise PermissionDenied(detail=IsApproved.message)
+        return super().validate(attrs)
 
 
 class LoginResponseSerializer(serializers.Serializer):
