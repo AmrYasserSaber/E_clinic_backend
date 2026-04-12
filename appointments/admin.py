@@ -1,7 +1,11 @@
 from django.contrib import admin
-
-from appointments.models import Appointment
-
+from appointments.models import (
+    Appointment,
+    AppointmentAuditLog,
+    ConsultationRecord,
+    PrescriptionItem,
+    RescheduleHistory,
+)
 
 @admin.register(Appointment)
 class AppointmentAdmin(admin.ModelAdmin):
@@ -9,14 +13,14 @@ class AppointmentAdmin(admin.ModelAdmin):
         "id",
         "patient",
         "doctor",
-        "date",
-        "time",
-        "session_duration",
+        "appointment_date",
+        "appointment_time",
+        "session_duration_minutes",
         "status",
         "check_in_time",
         "updated_at",
     )
-    list_filter = ("status", "date", "doctor")
+    list_filter = ("status", "appointment_date", "doctor")
     search_fields = (
         "patient__email",
         "patient__first_name",
@@ -25,3 +29,8 @@ class AppointmentAdmin(admin.ModelAdmin):
         "doctor__first_name",
         "doctor__last_name",
     )
+
+admin.site.register(RescheduleHistory)
+admin.site.register(AppointmentAuditLog)
+admin.site.register(ConsultationRecord)
+admin.site.register(PrescriptionItem)

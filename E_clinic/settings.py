@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     "adminpanel.apps.AdminpanelConfig",
     "analytics.apps.AnalyticsConfig",
     "reports.apps.ReportsConfig",
+    "slots.apps.SlotsConfig",
     "patients.apps.PatientsConfig",
     "appointments.apps.AppointmentsConfig",
     "drf_spectacular",
@@ -164,3 +165,5 @@ SIMPLE_JWT = {
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
 }
+
+APPOINTMENT_BUFFER_MINUTES = env.int("APPOINTMENT_BUFFER_MINUTES", default=5)
