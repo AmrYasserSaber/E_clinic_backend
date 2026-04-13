@@ -24,4 +24,5 @@ class QueueItemSerializer(serializers.Serializer):
 class DoctorAvailabilitySerializer(serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
+    specialty = serializers.CharField()
     status = serializers.ChoiceField(choices=["AVAILABLE", "BUSY", "AWAY"])

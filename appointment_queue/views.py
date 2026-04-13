@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 
 from appointments.models import Appointment, AppointmentStatus
 from users.models import User
-from users.permissions import IsAdminOrDoctorOrReceptionist
+from users.permissions import IsAdminOrDoctorOrReceptionist, IsApproved
 
 from .serializers import DoctorAvailabilitySerializer, QueueItemSerializer, QueueQuerySerializer
 
@@ -128,7 +128,7 @@ class QueueListView(APIView):
 
 
 class DoctorsAvailabilityView(APIView):
-    permission_classes = [IsAuthenticated, IsAdminOrDoctorOrReceptionist]
+    permission_classes = [IsAuthenticated, IsApproved]
 
     @extend_schema(
         tags=["Queue"],
@@ -164,6 +164,13 @@ class DoctorsAvailabilityView(APIView):
                 status = "AWAY"
 
             full_name = f"{doctor.first_name} {doctor.last_name}".strip() or doctor.email
-            rows.append({"id": doctor.id, "name": full_name, "status": status})
+            rows.append(
+                {
+                    "id": doctor.id,
+                    "name": full_name,
+                    "specialty": doctor.specialty or "General Practitioner",
+                    "status": status,
+                }
+            )
 
         return Response(DoctorAvailabilitySerializer(rows, many=True).data, status=200)
