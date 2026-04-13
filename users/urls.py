@@ -2,7 +2,14 @@ from django.urls import path
 from drf_spectacular.utils import extend_schema
 from rest_framework_simplejwt.views import TokenRefreshView
 
-from users.views import LoginView, LogoutView, MeView, SignupView
+from users.views import (
+    ChangePasswordView,
+    LoginView,
+    LogoutView,
+    MeView,
+    SetPasswordWithOtpView,
+    SignupView,
+)
 from users.serializers import (
     ApprovalAwareTokenRefreshSerializer,
     MessageResponseSerializer,
@@ -34,6 +41,8 @@ class CustomTokenRefreshView(TokenRefreshView):
 urlpatterns = [
     path("signup/", SignupView.as_view(), name="signup"),
     path("login/", LoginView.as_view(), name="login"),
+    path("set-password-otp/", SetPasswordWithOtpView.as_view(), name="set_password_otp"),
+    path("change-password/", ChangePasswordView.as_view(), name="change_password"),
     path("refresh/", CustomTokenRefreshView.as_view(), name="token_refresh"),
     path("logout/", LogoutView.as_view(), name="logout"),
     path("me/", MeView.as_view(), name="me"),

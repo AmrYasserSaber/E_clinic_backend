@@ -16,6 +16,11 @@ def _login_url() -> str | None:
     return f"{base.rstrip('/')}/auth/login" if base else None
 
 
+def _set_password_otp_url() -> str | None:
+    base: str = (settings.FRONTEND_BASE_URL or "").strip()
+    return f"{base.rstrip('/')}/auth/set-password-otp" if base else None
+
+
 def send_welcome_email(*, user: User, role: str) -> int:
     context: dict[str, object] = {
         "first_name": user.first_name,
@@ -68,3 +73,23 @@ def send_profile_updated_email(
         )
     except Exception:
         logger.exception("Failed to enqueue profile-updated email for user %s", user.pk)
+
+
+def send_admin_created_user_otp_email(*, user: User, otp: str, expires_in_minutes: int) -> int:
+    context: dict[str, object] = {
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "email": user.email,
+        "otp": otp,
+        "expires_in_minutes": expires_in_minutes,
+        "login_url": _set_password_otp_url(),
+    }
+    subject: str = "Set your E-Clinic password"
+    plain_body: str = render_to_string("emails/admin_created_user_otp.txt", context)
+    html_body: str = render_to_string("emails/admin_created_user_otp.html", context)
+    return send_email(
+        subject=subject,
+        body=plain_body,
+        recipient_list=[user.email],
+        html_body=html_body,
+    )
