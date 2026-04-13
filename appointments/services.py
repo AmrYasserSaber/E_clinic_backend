@@ -371,13 +371,14 @@ def cancel_appointment(*, appointment_id: int, actor) -> Appointment:
 
 
 def confirm_appointment(*, appointment_id: int, actor) -> Appointment:
-	if get_primary_role(actor) != "Doctor":
-		raise PermissionDenied("Only doctors can confirm appointments.")
+	role = get_primary_role(actor)
+	if role not in {"Doctor", "Receptionist"}:
+		raise PermissionDenied("Only doctors or receptionists can confirm appointments.")
 
 	with transaction.atomic():
 		appointment = _lock_appointment(appointment_id)
 
-		if appointment.doctor_id != actor.id:
+		if role == "Doctor" and appointment.doctor_id != actor.id:
 			raise PermissionDenied("You can only confirm your own appointments.")
 
 		if appointment.status == AppointmentStatus.CONFIRMED:
@@ -396,7 +397,7 @@ def confirm_appointment(*, appointment_id: int, actor) -> Appointment:
 			action=AuditAction.CONFIRMED,
 			from_status=old_status,
 			to_status=AppointmentStatus.CONFIRMED,
-			notes="Doctor confirmed appointment.",
+			notes="Appointment confirmed.",
 		)
 
 		return appointment
