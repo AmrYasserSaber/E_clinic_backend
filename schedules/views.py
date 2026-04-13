@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
@@ -61,7 +62,11 @@ class DoctorScheduleListUpsertView(APIView):
     @extend_schema(
         tags=["Schedules"],
         summary="Upsert doctor weekly schedule",
-        description="Accepts a list of schedule days and upserts one entry per `day_of_week`.",
+        description=(
+            "Accepts a list of working schedule days and syncs the doctor's weekly schedule. "
+            "Any existing day not included in the payload is removed. "
+            "Send an empty list to clear all working days."
+        ),
         parameters=[
             OpenApiParameter(
                 name="id",
@@ -78,18 +83,23 @@ class DoctorScheduleListUpsertView(APIView):
         serializer = DoctorScheduleUpsertItemSerializer(data=request.data, many=True)
         serializer.is_valid(raise_exception=True)
 
-        for item in serializer.validated_data:
-            day = item["day_of_week"]
-            DoctorSchedule.objects.update_or_create(
-                doctor=doctor,
-                day_of_week=day,
-                defaults={
-                    "start_time": item["start_time"],
-                    "end_time": item["end_time"],
-                    "session_duration_minutes": item["session_duration_minutes"],
-                    "buffer_minutes": item.get("buffer_minutes", 5),
-                },
-            )
+        submitted_days = {item["day_of_week"] for item in serializer.validated_data}
+
+        with transaction.atomic():
+            DoctorSchedule.objects.filter(doctor=doctor).exclude(day_of_week__in=submitted_days).delete()
+
+            for item in serializer.validated_data:
+                day = item["day_of_week"]
+                DoctorSchedule.objects.update_or_create(
+                    doctor=doctor,
+                    day_of_week=day,
+                    defaults={
+                        "start_time": item["start_time"],
+                        "end_time": item["end_time"],
+                        "session_duration_minutes": item["session_duration_minutes"],
+                        "buffer_minutes": item.get("buffer_minutes", 5),
+                    },
+                )
 
         updated = DoctorSchedule.objects.filter(doctor=doctor).order_by("day_of_week", "start_time")
         return Response(DoctorScheduleSerializer(updated, many=True).data, status=status.HTTP_200_OK)
