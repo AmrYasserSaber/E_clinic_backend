@@ -112,7 +112,10 @@ class Command(BaseCommand):
         is_staff: bool = False,
         is_superuser: bool = False,
     ) -> None:
-        if User.objects.filter(email=email).exists():
+        existing_user = User.objects.filter(email=email).first()
+        if existing_user:
+            group: Group = Group.objects.get(name=group_name)
+            existing_user.groups.add(group)
             return
         user: User = User.objects.create_user(
             email=email,
