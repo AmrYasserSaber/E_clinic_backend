@@ -1,0 +1,12 @@
+Hello {{ first_name }},
+
+Thank you for registering with E-Clinic.
+
+{% if is_approved %}Your account is active. You can sign in anytime using your email address and the password you chose.
+{% else %}Your account has been created. An administrator must approve it before you can sign in. We will not email you again for approval; please try signing in after you have been notified or when your clinic contact confirms access.
+{% endif %}
+{% if login_url %}Sign in: {{ login_url }}
+{% endif %}
+If you did not create this account, you can ignore this message.
+
+— E-Clinic

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from datetime import date
 
@@ -14,6 +15,9 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from users.models import User
 from users.permissions import IsApproved
+from users.welcome_email import send_welcome_email
+
+logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class TokenPair:
@@ -76,6 +80,10 @@ class SignupSerializer(serializers.ModelSerializer):
         group_name: str = role.capitalize()
         group: Group = Group.objects.get(name=group_name)
         user.groups.add(group)
+        try:
+            send_welcome_email(user=user, role=role)
+        except Exception:
+            logger.exception("Failed to enqueue welcome email for user_id=%s", user.pk)
         return user
 
 
