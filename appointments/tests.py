@@ -514,6 +514,77 @@ class AppointmentApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_reschedule_by_doctor_date_time_updates_appointment(self):
+        appointment = self._create_appointment(
+            patient=self.patient,
+            doctor=self.doctor,
+            appointment_date=self.tomorrow,
+            appointment_time=time(10, 0),
+            status_value=AppointmentStatus.REQUESTED,
+            slot=None,
+        )
+
+        response = self.patient_client.patch(
+            f"/api/appointments/{appointment.id}/reschedule/",
+            {
+                "doctor_id": self.doctor.id,
+                "date": self.tomorrow.isoformat(),
+                "time": "09:00:00",
+                "reason": "Earlier works better",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        appointment.refresh_from_db()
+        self.assertEqual(appointment.appointment_time.replace(second=0, microsecond=0), time(9, 0))
+        self.assertIsNotNone(appointment.slot_id)
+        self.assertEqual(RescheduleHistory.objects.filter(appointment=appointment).count(), 1)
+
+    def test_reschedule_same_calendar_time_returns_400(self):
+        appointment = self._create_appointment(
+            patient=self.patient,
+            doctor=self.doctor,
+            appointment_date=self.tomorrow,
+            appointment_time=time(10, 0),
+            status_value=AppointmentStatus.REQUESTED,
+            slot=None,
+        )
+
+        response = self.patient_client.patch(
+            f"/api/appointments/{appointment.id}/reschedule/",
+            {
+                "doctor_id": self.doctor.id,
+                "date": self.tomorrow.isoformat(),
+                "time": "10:00:00",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_reschedule_invalid_time_returns_400(self):
+        appointment = self._create_appointment(
+            patient=self.patient,
+            doctor=self.doctor,
+            appointment_date=self.tomorrow,
+            appointment_time=time(10, 0),
+            status_value=AppointmentStatus.REQUESTED,
+            slot=None,
+        )
+
+        response = self.patient_client.patch(
+            f"/api/appointments/{appointment.id}/reschedule/",
+            {
+                "doctor_id": self.doctor.id,
+                "date": self.tomorrow.isoformat(),
+                "time": "09:07:00",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
     # CHECK-IN
     def test_check_in_confirmed_by_receptionist_sets_checked_in_and_server_time(self):
         appointment = self._create_appointment(
