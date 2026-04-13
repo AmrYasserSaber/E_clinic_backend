@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Profile Updated – E-Clinic</title>
+    </head>
+    <body
+        style="
+            margin: 0;
+            padding: 0;
+            background-color: #f4f6f8;
+            font-family:
+                system-ui,
+                -apple-system,
+                Segoe UI,
+                Roboto,
+                Helvetica,
+                Arial,
+                sans-serif;
+            line-height: 1.5;
+            color: #1a1a1a;
+        "
+    >
+        <table
+            role="presentation"
+            width="100%"
+            cellspacing="0"
+            cellpadding="0"
+            style="background-color: #f4f6f8; padding: 24px 16px"
+        >
+            <tr>
+                <td align="center">
+                    <table
+                        role="presentation"
+                        width="100%"
+                        cellspacing="0"
+                        cellpadding="0"
+                        style="
+                            max-width: 560px;
+                            background-color: #ffffff;
+                            border-radius: 8px;
+                            overflow: hidden;
+                            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+                        "
+                    >
+                        <tr>
+                            <td
+                                style="
+                                    padding: 28px 28px 8px 28px;
+                                    background-color: #0d9488;
+                                "
+                            >
+                                <p
+                                    style="
+                                        margin: 0;
+                                        font-size: 20px;
+                                        font-weight: 700;
+                                        color: #ffffff;
+                                    "
+                                >
+                                    E-Clinic
+                                </p>
+                                <p
+                                    style="
+                                        margin: 6px 0 0 0;
+                                        font-size: 14px;
+                                        color: rgba(255, 255, 255, 0.9);
+                                    "
+                                >
+                                    {% if is_approval %}Account Approved{% else %}Profile Updated{% endif %}
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 28px">
+                                <p style="margin: 0 0 16px 0; font-size: 16px">
+                                    Hello {{ first_name }},
+                                </p>
+
+                                {% if is_approval %}
+                                <p
+                                    style="
+                                        margin: 0 0 16px 0;
+                                        font-size: 15px;
+                                        color: #374151;
+                                    "
+                                >
+                                    Great news — your account has been
+                                    <strong>approved</strong>! You can now sign
+                                    in and start using E-Clinic.
+                                </p>
+                                {% else %}
+                                <p
+                                    style="
+                                        margin: 0 0 16px 0;
+                                        font-size: 15px;
+                                        color: #374151;
+                                    "
+                                >
+                                    An administrator has updated your profile.
+                                    Here is a summary of what changed:
+                                </p>
+                                <table
+                                    role="presentation"
+                                    width="100%"
+                                    cellspacing="0"
+                                    cellpadding="0"
+                                    style="
+                                        margin: 0 0 20px 0;
+                                        border: 1px solid #e5e7eb;
+                                        border-radius: 6px;
+                                        overflow: hidden;
+                                    "
+                                >
+                                    <tr
+                                        style="
+                                            background-color: #f9fafb;
+                                        "
+                                    >
+                                        <td
+                                            style="
+                                                padding: 10px 14px;
+                                                font-size: 13px;
+                                                font-weight: 600;
+                                                color: #374151;
+                                                border-bottom: 1px solid #e5e7eb;
+                                            "
+                                        >
+                                            Field
+                                        </td>
+                                        <td
+                                            style="
+                                                padding: 10px 14px;
+                                                font-size: 13px;
+                                                font-weight: 600;
+                                                color: #374151;
+                                                border-bottom: 1px solid #e5e7eb;
+                                            "
+                                        >
+                                            Previous
+                                        </td>
+                                        <td
+                                            style="
+                                                padding: 10px 14px;
+                                                font-size: 13px;
+                                                font-weight: 600;
+                                                color: #374151;
+                                                border-bottom: 1px solid #e5e7eb;
+                                            "
+                                        >
+                                            New
+                                        </td>
+                                    </tr>
+                                    {% for change in changes %}
+                                    <tr>
+                                        <td
+                                            style="
+                                                padding: 10px 14px;
+                                                font-size: 14px;
+                                                color: #1a1a1a;
+                                                border-bottom: 1px solid #f3f4f6;
+                                            "
+                                        >
+                                            {{ change.field }}
+                                        </td>
+                                        <td
+                                            style="
+                                                padding: 10px 14px;
+                                                font-size: 14px;
+                                                color: #6b7280;
+                                                border-bottom: 1px solid #f3f4f6;
+                                            "
+                                        >
+                                            {{ change.old_value }}
+                                        </td>
+                                        <td
+                                            style="
+                                                padding: 10px 14px;
+                                                font-size: 14px;
+                                                color: #0d9488;
+                                                font-weight: 600;
+                                                border-bottom: 1px solid #f3f4f6;
+                                            "
+                                        >
+                                            {{ change.new_value }}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </table>
+                                {% endif %}
+
+                                {% if login_url %}
+                                <table
+                                    role="presentation"
+                                    cellspacing="0"
+                                    cellpadding="0"
+                                    style="margin: 0 0 24px 0"
+                                >
+                                    <tr>
+                                        <td
+                                            style="
+                                                border-radius: 6px;
+                                                background-color: #0d9488;
+                                            "
+                                        >
+                                            <a
+                                                href="{{ login_url }}"
+                                                style="
+                                                    display: inline-block;
+                                                    padding: 12px 22px;
+                                                    font-size: 15px;
+                                                    font-weight: 600;
+                                                    color: #ffffff;
+                                                    text-decoration: none;
+                                                "
+                                                >Sign in</a
+                                            >
+                                        </td>
+                                    </tr>
+                                </table>
+                                {% endif %}
+
+                                <p
+                                    style="
+                                        margin: 0;
+                                        font-size: 13px;
+                                        color: #6b7280;
+                                    "
+                                >
+                                    If you have any questions, please contact
+                                    your clinic administrator.
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td
+                                style="
+                                    padding: 16px 28px 24px 28px;
+                                    border-top: 1px solid #e5e7eb;
+                                "
+                            >
+                                <p
+                                    style="
+                                        margin: 0;
+                                        font-size: 12px;
+                                        color: #9ca3af;
+                                    "
+                                >
+                                    — E-Clinic
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+</html>

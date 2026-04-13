@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from django.contrib.auth.models import Group
 from django.contrib.auth.base_user import BaseUserManager
 
 
@@ -26,5 +27,8 @@ class UserManager(BaseUserManager):
             raise ValueError("Superuser must have is_staff=True.")
         if extra_fields.get("is_superuser") is not True:
             raise ValueError("Superuser must have is_superuser=True.")
-        return self.create_user(email=email, password=password, **extra_fields)
+        user = self.create_user(email=email, password=password, **extra_fields)
+        admin_group, _ = Group.objects.get_or_create(name="Admin")
+        user.groups.add(admin_group)
+        return user
 

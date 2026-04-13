@@ -1,0 +1,12 @@
+Hello {{ first_name }},
+
+{% if is_approval %}Your account has been approved! You can now sign in and start using E-Clinic.
+{% else %}An administrator has updated your profile. Here is a summary of what changed:
+
+{% for change in changes %}- {{ change.field }}: {{ change.old_value }} → {{ change.new_value }}
+{% endfor %}{% endif %}
+{% if login_url %}Sign in: {{ login_url }}
+{% endif %}
+If you have any questions, please contact your clinic administrator.
+
+— E-Clinic
