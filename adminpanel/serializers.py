@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+import logging
+
 from django.contrib.auth.models import Group
 from rest_framework import serializers
 
 from users.models import User
-from users.welcome_email import send_profile_updated_email
+from users.password_otp import generate_and_store_otp, otp_ttl_seconds
+from users.welcome_email import send_admin_created_user_otp_email, send_profile_updated_email
+
+logger = logging.getLogger(__name__)
 
 
 ROLE_TO_GROUP = {
@@ -54,14 +59,15 @@ class AdminUserListSerializer(RoleFieldMixin, serializers.ModelSerializer):
 
 
 class AdminUserCreateSerializer(serializers.ModelSerializer):
-    role = serializers.ChoiceField(choices=list(ROLE_TO_GROUP.keys()))
-    password = serializers.CharField(write_only=True, required=True, min_length=8)
-
+    role = serializers.ChoiceField(
+        choices=list(ROLE_TO_GROUP.keys()),
+        write_only=True,
+        help_text="Maps to a Django auth group (Admin, Doctor, Receptionist, Patient).",
+    )
     class Meta:
         model = User
         fields = [
             "email",
-            "password",
             "first_name",
             "last_name",
             "phone_number",
@@ -79,8 +85,7 @@ class AdminUserCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data: dict) -> User:
         role = validated_data.pop("role")
-        password = validated_data.pop("password")
-        user = User.objects.create_user(password=password, **validated_data)
+        user = User.objects.create_user(**validated_data)
 
         group = Group.objects.get(name=ROLE_TO_GROUP[role])
         user.groups.set([group])
@@ -89,11 +94,28 @@ class AdminUserCreateSerializer(serializers.ModelSerializer):
             user.is_approved = True
             user.save(update_fields=["is_approved"])
 
+        try:
+            otp = generate_and_store_otp(user.email)
+            send_admin_created_user_otp_email(
+                user=user,
+                otp=otp,
+                expires_in_minutes=max(1, otp_ttl_seconds() // 60),
+            )
+        except Exception:
+            logger.exception("Failed to send OTP email for admin-created user %s", user.pk)
+
         return user
+
+    def to_representation(self, instance: User) -> dict:
+        return AdminUserListSerializer(instance, context=self.context).data
 
 
 class AdminUserUpdateSerializer(serializers.ModelSerializer):
-    role = serializers.ChoiceField(choices=list(ROLE_TO_GROUP.keys()), required=False)
+    role = serializers.ChoiceField(
+        choices=list(ROLE_TO_GROUP.keys()),
+        required=False,
+        write_only=True,
+    )
 
     class Meta:
         model = User
@@ -171,6 +193,9 @@ class AdminUserUpdateSerializer(serializers.ModelSerializer):
         )
 
         return instance
+
+    def to_representation(self, instance: User) -> dict:
+        return AdminUserListSerializer(instance, context=self.context).data
 
 
 class PatientListSerializer(serializers.ModelSerializer):
