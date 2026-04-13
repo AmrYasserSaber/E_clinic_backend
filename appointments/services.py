@@ -217,6 +217,60 @@ def _lock_slot(slot_id: int) -> Slot:
 	return slot
 
 
+def _lock_resolved_slot_from_booking_time(
+	*,
+	doctor_id: int,
+	appointment_date,
+	appointment_time,
+) -> Slot:
+	from appointments.slot_generation import iter_available_slots
+
+	if not User.objects.filter(pk=doctor_id, groups__name="Doctor").exists():
+		raise ValidationError({"doctor_id": _("Invalid doctor.")})
+
+	req_t = appointment_time.replace(microsecond=0)
+	matched = None
+	for s in iter_available_slots(doctor_id, appointment_date):
+		ls = timezone.localtime(s["start"])
+		st = ls.time().replace(microsecond=0)
+		if st == req_t:
+			matched = s
+			break
+	if matched is None:
+		raise ValidationError(
+			{"detail": _("Selected time is not available for this doctor.")}
+		)
+
+	le = timezone.localtime(matched["end"])
+	end_t = le.time().replace(microsecond=0)
+	duration_mins = int((matched["end"] - matched["start"]).total_seconds() // 60)
+
+	slot, _created = Slot.objects.get_or_create(
+		doctor_id=doctor_id,
+		date=appointment_date,
+		start_time=req_t,
+		defaults={
+			"end_time": end_t,
+			"duration_minutes": duration_mins,
+			"is_available": True,
+		},
+	)
+	if not slot.is_available:
+		raise BookingConflictError("Selected slot is no longer available.")
+
+	locked = (
+		Slot.objects.select_for_update(nowait=False)
+		.select_related("doctor")
+		.filter(pk=slot.pk)
+		.first()
+	)
+	if locked is None:
+		raise ValidationError({"new_slot_id": _("Invalid slot.")})
+	if not locked.is_available:
+		raise BookingConflictError("Selected slot is no longer available.")
+	return locked
+
+
 def _lock_appointment(appointment_id: int) -> Appointment:
 	appointment = (
 		Appointment.objects.select_for_update(nowait=False)
@@ -505,10 +559,32 @@ def mark_no_show(*, appointment_id: int, actor) -> Appointment:
 		return appointment
 
 
-def reschedule_appointment(*, appointment_id: int, actor, new_slot_id: int, reason: str = "") -> Appointment:
+def reschedule_appointment(
+	*,
+	appointment_id: int,
+	actor,
+	new_slot_id: int | None = None,
+	doctor_id: int | None = None,
+	appointment_date=None,
+	appointment_time=None,
+	reason: str = "",
+) -> Appointment:
 	role = get_primary_role(actor)
 	if role not in {"Patient", "Receptionist"}:
 		raise PermissionDenied("Only patient or receptionist can reschedule appointments.")
+
+	if new_slot_id is None and (
+		doctor_id is None or appointment_date is None or appointment_time is None
+	):
+		raise ValidationError(
+			{"detail": "new_slot_id or doctor_id with appointment_date and appointment_time is required."}
+		)
+	if new_slot_id is not None and (
+		doctor_id is not None or appointment_date is not None or appointment_time is not None
+	):
+		raise ValidationError(
+			{"detail": "Provide either new_slot_id or doctor_id with date and time, not both."}
+		)
 
 	buffer_minutes = int(getattr(settings, "APPOINTMENT_BUFFER_MINUTES", 5))
 
@@ -525,11 +601,29 @@ def reschedule_appointment(*, appointment_id: int, actor, new_slot_id: int, reas
 				{"detail": f"Cannot reschedule appointment while status is {appointment.status}."}
 			)
 
+		if new_slot_id is None:
+			if (
+				appointment.doctor_id == doctor_id
+				and appointment.appointment_date == appointment_date
+				and appointment.appointment_time.replace(microsecond=0)
+				== appointment_time.replace(microsecond=0)
+			):
+				raise ValidationError(
+					{"detail": _("New time must differ from the current appointment.")}
+				)
+
 		old_slot = appointment.slot
 		old_date = appointment.appointment_date
 		old_time = appointment.appointment_time
 
-		new_slot = _lock_slot(new_slot_id)
+		if new_slot_id is not None:
+			new_slot = _lock_slot(new_slot_id)
+		else:
+			new_slot = _lock_resolved_slot_from_booking_time(
+				doctor_id=doctor_id,
+				appointment_date=appointment_date,
+				appointment_time=appointment_time,
+			)
 		if not new_slot.is_available:
 			raise BookingConflictError("Selected slot is no longer available.")
 

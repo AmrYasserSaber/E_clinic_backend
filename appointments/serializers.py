@@ -111,8 +111,37 @@ class AppointmentDeclineSerializer(serializers.Serializer):
 
 
 class AppointmentRescheduleSerializer(serializers.Serializer):
-    new_slot_id = serializers.IntegerField(required=True)
+    new_slot_id = serializers.IntegerField(required=False, allow_null=True)
+    doctor_id = serializers.IntegerField(required=False)
+    appointment_date = serializers.DateField(required=False)
+    appointment_time = serializers.TimeField(required=False)
+    date = serializers.DateField(required=False)
+    time = serializers.TimeField(required=False)
     reason = serializers.CharField(required=False, allow_blank=True)
+
+    def validate(self, attrs: dict) -> dict:
+        if attrs.get("appointment_date") is None and attrs.get("date") is not None:
+            attrs["appointment_date"] = attrs["date"]
+        if attrs.get("appointment_time") is None and attrs.get("time") is not None:
+            attrs["appointment_time"] = attrs["time"]
+
+        has_slot_id = attrs.get("new_slot_id") is not None
+        has_time_path = (
+            attrs.get("doctor_id") is not None
+            and attrs.get("appointment_date") is not None
+            and attrs.get("appointment_time") is not None
+        )
+        if has_slot_id and has_time_path:
+            raise serializers.ValidationError(
+                "Provide either new_slot_id or doctor_id with date and time, not both."
+            )
+        if not has_slot_id and not has_time_path:
+            raise serializers.ValidationError(
+                "Provide new_slot_id or doctor_id, appointment_date, and appointment_time."
+            )
+        attrs.pop("date", None)
+        attrs.pop("time", None)
+        return attrs
 
 
 class DoctorSlotSerializer(serializers.ModelSerializer):
