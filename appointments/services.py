@@ -20,7 +20,6 @@ from appointments.models import (
 	RescheduleHistory,
 )
 from slots.models import Slot
-from appointments.slot_generation import iter_available_slots
 
 User = get_user_model()
 
@@ -224,6 +223,7 @@ def _lock_resolved_slot_from_booking_time(
 	appointment_date,
 	appointment_time,
 ) -> Slot:
+	from appointments.slot_generation import iter_available_slots
 
 	if not User.objects.filter(pk=doctor_id, groups__name="Doctor").exists():
 		raise ValidationError({"doctor_id": _("Invalid doctor.")})
