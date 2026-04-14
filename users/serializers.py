@@ -47,6 +47,8 @@ class SignupSerializer(serializers.ModelSerializer):
         help_text="User role to assign at signup.",
     )
     password = serializers.CharField(write_only=True, min_length=6, help_text="Account password.")
+    phone_number = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    date_of_birth = serializers.DateField(required=False, allow_null=True)
 
     class Meta:
         model = User
@@ -61,6 +63,8 @@ class SignupSerializer(serializers.ModelSerializer):
         ]
 
     def validate_date_of_birth(self, value: date) -> date:
+        if value is None:
+            return value
         if value >= date.today():
             raise serializers.ValidationError("dateOfBirth must be in the past.")
         return value
@@ -227,3 +231,48 @@ class SetPasswordWithOtpSerializer(serializers.Serializer):
             raise serializers.ValidationError({"new_password": list(err.messages)}) from err
         return attrs
 
+
+class GoogleStartResponseSerializer(serializers.Serializer):
+    authorization_url = serializers.CharField()
+
+
+class GoogleCompleteIntent:
+    LOGIN = "login"
+    SIGNUP = "signup"
+
+    @classmethod
+    def choices(cls) -> list[tuple[str, str]]:
+        return [(cls.LOGIN, "login"), (cls.SIGNUP, "signup")]
+
+
+class GoogleCompleteRequestSerializer(serializers.Serializer):
+    one_time_code = serializers.CharField()
+    intent = serializers.ChoiceField(choices=GoogleCompleteIntent.choices())
+    role = serializers.ChoiceField(
+        choices=["patient"],
+        required=False,
+        help_text="Required only for signup, and must be patient.",
+    )
+    first_name = serializers.CharField(required=False)
+    last_name = serializers.CharField(required=False)
+    phone_number = serializers.CharField(required=False)
+    date_of_birth = serializers.DateField(required=False)
+
+    def validate(self, attrs: dict) -> dict:
+        intent: str = attrs["intent"]
+        if intent == GoogleCompleteIntent.LOGIN:
+            return attrs
+        role: str | None = attrs.get("role")
+        if role != "patient":
+            raise serializers.ValidationError({"role": "role must be patient for Google signup."})
+        return attrs
+
+
+class GooglePrefillRequestSerializer(serializers.Serializer):
+    one_time_code = serializers.CharField()
+
+
+class GooglePrefillResponseSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=False, allow_null=True)
+    first_name = serializers.CharField(required=False, allow_null=True)
+    last_name = serializers.CharField(required=False, allow_null=True)
