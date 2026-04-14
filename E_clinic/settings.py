@@ -120,6 +120,20 @@ DEFAULT_FROM_EMAIL = env(
 
 FRONTEND_BASE_URL = env("FRONTEND_BASE_URL", default="http://localhost:4200")
 
+# Google OAuth2 (Authorization Code flow)
+GOOGLE_OAUTH_CLIENT_ID = env("GOOGLE_OAUTH_CLIENT_ID", default="")
+GOOGLE_OAUTH_CLIENT_SECRET = env("GOOGLE_OAUTH_CLIENT_SECRET", default="")
+GOOGLE_OAUTH_CALLBACK_URL = env("GOOGLE_OAUTH_CALLBACK_URL", default="")
+GOOGLE_OAUTH_SCOPES = env.list(
+    "GOOGLE_OAUTH_SCOPES",
+    default=["openid", "email", "profile"],
+)
+GOOGLE_OAUTH_STATE_SECRET = env("GOOGLE_OAUTH_STATE_SECRET", default=SECRET_KEY)
+GOOGLE_OAUTH_FRONTEND_COMPLETE_URL = env(
+    "GOOGLE_OAUTH_FRONTEND_COMPLETE_URL",
+    default=f"{FRONTEND_BASE_URL}/auth/google/complete",
+)
+
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
