@@ -1,0 +1,13 @@
+Hello {{ first_name }},
+
+An administrator created your E-Clinic account.
+
+Use this one-time password (OTP) to set your password:
+{{ otp }}
+
+This OTP expires in {{ expires_in_minutes }} minutes.
+{% if login_url %}After setting your password, sign in here: {{ login_url }}
+{% endif %}
+If you did not expect this account, please contact your clinic administrator.
+
+— E-Clinic

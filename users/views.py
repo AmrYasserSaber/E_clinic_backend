@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.contrib.auth import get_user_model
 import secrets
 
 from django.conf import settings
@@ -16,7 +17,9 @@ from drf_spectacular.utils import extend_schema
 from users.google_oauth_service import GoogleOAuthService, GoogleOneTimeCodePayload
 from users.models import User
 from users.permissions import IsApproved
+from users.password_otp import verify_otp
 from users.serializers import (
+    ChangePasswordSerializer,
     GoogleCompleteIntent,
     GoogleCompleteRequestSerializer,
     GooglePrefillRequestSerializer,
@@ -26,10 +29,13 @@ from users.serializers import (
     LoginSerializer,
     LogoutRequestSerializer,
     MessageResponseSerializer,
+    SetPasswordWithOtpSerializer,
     SignupResponseSerializer,
     SignupSerializer,
     UserMeSerializer,
 )
+
+User = get_user_model()
 from django.contrib.auth.models import Group
 from users.welcome_email import send_welcome_email
 
@@ -145,6 +151,52 @@ class MeView(APIView):
     def get(self, request):
         serializer = UserMeSerializer(request.user)
         return Response(serializer.data, status=200)
+
+
+class ChangePasswordView(APIView):
+    permission_classes = [IsAuthenticated, IsApproved]
+
+    @extend_schema(
+        tags=["Authentication"],
+        summary="Change current password",
+        description="Changes password for the authenticated user.",
+        request=ChangePasswordSerializer,
+        responses={200: MessageResponseSerializer, 400: MessageResponseSerializer},
+    )
+    def post(self, request):
+        serializer = ChangePasswordSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        request.user.set_password(serializer.validated_data["new_password"])
+        request.user.save(update_fields=["password"])
+        return Response({"detail": "Password changed successfully."}, status=200)
+
+
+class SetPasswordWithOtpView(APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        tags=["Authentication"],
+        summary="Set password using OTP",
+        description=(
+            "Sets password using the one-time password emailed when the account is created "
+            "by an administrator."
+        ),
+        request=SetPasswordWithOtpSerializer,
+        responses={200: MessageResponseSerializer, 400: MessageResponseSerializer},
+    )
+    def post(self, request):
+        serializer = SetPasswordWithOtpSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data["email"]
+        otp = serializer.validated_data["otp"]
+        if not verify_otp(email, otp):
+            return Response({"detail": "Invalid or expired OTP."}, status=400)
+
+        user = User.objects.get(email=email)
+        user.set_password(serializer.validated_data["new_password"])
+        user.save(update_fields=["password"])
+        return Response({"detail": "Password set successfully."}, status=200)
 
 
 class GoogleStartView(APIView):

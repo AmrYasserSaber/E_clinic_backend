@@ -257,14 +257,21 @@ class AppointmentRescheduleView(APIView):
     def patch(self, request, pk: int):
         payload = AppointmentRescheduleSerializer(data=request.data)
         payload.is_valid(raise_exception=True)
+        vd = payload.validated_data
+        kwargs = {
+            "appointment_id": pk,
+            "actor": request.user,
+            "reason": vd.get("reason", ""),
+        }
+        if vd.get("new_slot_id") is not None:
+            kwargs["new_slot_id"] = vd["new_slot_id"]
+        else:
+            kwargs["doctor_id"] = vd["doctor_id"]
+            kwargs["appointment_date"] = vd["appointment_date"]
+            kwargs["appointment_time"] = vd["appointment_time"]
 
         try:
-            appointment = reschedule_appointment(
-                appointment_id=pk,
-                actor=request.user,
-                new_slot_id=payload.validated_data["new_slot_id"],
-                reason=payload.validated_data.get("reason", ""),
-            )
+            appointment = reschedule_appointment(**kwargs)
         except BookingConflictError as exc:
             return Response({"detail": str(exc)}, status=409)
 

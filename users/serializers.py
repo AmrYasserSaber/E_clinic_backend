@@ -188,6 +188,50 @@ class LogoutRequestSerializer(serializers.Serializer):
     refresh_token = serializers.CharField(help_text="Refresh token to blacklist.")
 
 
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(write_only=True, help_text="Current password.")
+    new_password = serializers.CharField(write_only=True, min_length=6, help_text="New password.")
+
+    def validate(self, attrs: dict) -> dict:
+        user = self.context["request"].user
+        old_password = attrs["old_password"]
+        new_password = attrs["new_password"]
+
+        if not user.check_password(old_password):
+            raise serializers.ValidationError({"old_password": ["Current password is incorrect."]})
+
+        if old_password == new_password:
+            raise serializers.ValidationError(
+                {"new_password": ["New password must be different from current password."]}
+            )
+
+        try:
+            password_validation.validate_password(new_password, user=user)
+        except DjangoValidationError as err:
+            raise serializers.ValidationError({"new_password": list(err.messages)}) from err
+        return attrs
+
+
+class SetPasswordWithOtpSerializer(serializers.Serializer):
+    email = serializers.EmailField(help_text="Account email address.")
+    otp = serializers.CharField(min_length=6, max_length=6, help_text="One-time password sent by email.")
+    new_password = serializers.CharField(write_only=True, min_length=6, help_text="New password.")
+
+    def validate_email(self, value: str) -> str:
+        normalized = value.strip().lower()
+        if not User.objects.filter(email=normalized).exists():
+            raise serializers.ValidationError("No account found for this email.")
+        return normalized
+
+    def validate(self, attrs: dict) -> dict:
+        user = User.objects.get(email=attrs["email"])
+        try:
+            password_validation.validate_password(attrs["new_password"], user=user)
+        except DjangoValidationError as err:
+            raise serializers.ValidationError({"new_password": list(err.messages)}) from err
+        return attrs
+
+
 class GoogleStartResponseSerializer(serializers.Serializer):
     authorization_url = serializers.CharField()
 

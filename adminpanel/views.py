@@ -12,6 +12,8 @@ from users.models import User
 from users.permissions import IsAdmin, IsAdminOrDoctorOrReceptionist
 from users.serializers import MessageResponseSerializer
 
+from users.welcome_email import send_profile_updated_email
+
 from .serializers import (
     AdminUserCreateSerializer,
     AdminUserListSerializer,
@@ -146,6 +148,16 @@ class AdminUserViewSet(viewsets.ModelViewSet):
 
         target.is_active = False
         target.save(update_fields=["is_active"])
+
+        send_profile_updated_email(
+            user=target,
+            changes=[{
+                "field": "Account Active",
+                "old_value": "Yes",
+                "new_value": "No",
+            }],
+        )
+
         return Response({"detail": "User deactivated successfully."}, status=status.HTTP_200_OK)
 
 
