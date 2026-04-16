@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
 from datetime import date
 
 from django.contrib.auth import authenticate, get_user_model, password_validation
@@ -18,12 +17,6 @@ from users.permissions import IsApproved
 from users.welcome_email import send_welcome_email
 
 logger = logging.getLogger(__name__)
-
-@dataclass(frozen=True)
-class TokenPair:
-    access: str
-    refresh: str
-
 
 class TokenRefreshRequestSerializer(serializers.Serializer):
     refresh = serializers.CharField(help_text="Valid refresh token.")
@@ -60,6 +53,7 @@ class SignupSerializer(serializers.ModelSerializer):
             "phone_number",
             "date_of_birth",
             "role",
+            "specialty",
         ]
 
     def validate_date_of_birth(self, value: date) -> date:
@@ -68,6 +62,12 @@ class SignupSerializer(serializers.ModelSerializer):
         if value >= date.today():
             raise serializers.ValidationError("dateOfBirth must be in the past.")
         return value
+
+    def validate(self, attrs: dict) -> dict:
+        role: str = attrs.get("role", "")
+        if role == "doctor" and not str(attrs.get("specialty") or "").strip():
+            raise serializers.ValidationError({"specialty": "specialty is required for doctor signup."})
+        return attrs
 
     def validate_password(self, value: str) -> str:
         try:

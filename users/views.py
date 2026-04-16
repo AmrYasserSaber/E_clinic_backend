@@ -15,7 +15,6 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from drf_spectacular.utils import extend_schema
 
 from users.google_oauth_service import GoogleOAuthService, GoogleOneTimeCodePayload
-from users.models import User
 from users.permissions import IsApproved
 from users.password_otp import verify_otp
 from users.serializers import (
@@ -34,10 +33,10 @@ from users.serializers import (
     SignupSerializer,
     UserMeSerializer,
 )
-
-User = get_user_model()
 from django.contrib.auth.models import Group
 from users.welcome_email import send_welcome_email
+
+User = get_user_model()
 
 
 class SignupView(APIView):
