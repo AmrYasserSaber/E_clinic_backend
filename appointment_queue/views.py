@@ -19,7 +19,7 @@ class QueueListView(APIView):
     permission_classes = [IsAuthenticated, IsAdminOrDoctorOrReceptionist]
 
     @extend_schema(
-        tags=["Queue"],
+        tags=["doctors", "Queue"],
         summary="Get queue",
         description="Returns queue entries filtered by optional date and doctor_id.",
         parameters=[
@@ -131,7 +131,7 @@ class DoctorsAvailabilityView(APIView):
     permission_classes = [IsAuthenticated, IsApproved]
 
     @extend_schema(
-        tags=["Queue"],
+        tags=["doctors", "Queue"],
         summary="Get doctors availability",
         description="Returns doctor availability status for today.",
         responses={200: DoctorAvailabilitySerializer(many=True)},

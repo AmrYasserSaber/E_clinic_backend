@@ -3,7 +3,7 @@ from __future__ import annotations
 from django.utils import timezone
 from rest_framework import serializers
 
-from appointments.models import Appointment, ConsultationRecord, PrescriptionItem
+from appointments.models import Appointment, ConsultationRecord, PrescriptionItem, RescheduleHistory
 from appointments.services import book_appointment
 from slots.models import Slot
 
@@ -94,15 +94,35 @@ class BaseAppointmentSerializer(serializers.ModelSerializer):
         ]
 
 
+class RescheduleHistoryReadSerializer(serializers.ModelSerializer):
+    changed_by = UserBriefSerializer(read_only=True)
+
+    class Meta:
+        model = RescheduleHistory
+        fields = [
+            "old_date",
+            "old_time",
+            "new_date",
+            "new_time",
+            "changed_by",
+            "reason",
+            "changed_at",
+        ]
+
+
 class AppointmentSerializer(BaseAppointmentSerializer):
     consultation_summary = ConsultationRecordReadSerializer(source="consultation_record", read_only=True)
+    reschedule_history = RescheduleHistoryReadSerializer(many=True, read_only=True)
 
     class Meta:
         model = Appointment
-        fields = BaseAppointmentSerializer.Meta.fields + ["consultation_summary"]
+        fields = BaseAppointmentSerializer.Meta.fields + ["consultation_summary", "reschedule_history"]
 
 
-class ReceptionistAppointmentSerializer(BaseAppointmentSerializer):
+class ReceptionistAppointmentSerializer(AppointmentSerializer):
+    """Use the full appointment serializer for receptionists so they receive
+    reschedule history and consultation summary in list responses.
+    """
     pass
 
 
@@ -198,3 +218,33 @@ class AvailableSlotSerializer(serializers.Serializer):
     date = serializers.DateField()
     startTime = serializers.TimeField()
     endTime = serializers.TimeField()
+
+
+class DoctorScheduleDayItemSerializer(serializers.Serializer):
+    date = serializers.DateField()
+    slots = DoctorSlotSerializer(many=True)
+
+
+class DoctorScheduleResponseSerializer(serializers.Serializer):
+    items = DoctorScheduleDayItemSerializer(many=True)
+
+
+class DoctorQueueResponseSerializer(serializers.Serializer):
+    date = serializers.DateField()
+    items = DoctorQueueItemSerializer(many=True)
+
+
+class RescheduleHistoryReadSerializer(serializers.ModelSerializer):
+    changed_by = UserBriefSerializer(read_only=True)
+
+    class Meta:
+        model = RescheduleHistory
+        fields = [
+            "old_date",
+            "old_time",
+            "new_date",
+            "new_time",
+            "changed_by",
+            "reason",
+            "changed_at",
+        ]

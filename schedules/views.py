@@ -40,7 +40,7 @@ class DoctorScheduleListUpsertView(APIView):
         return get_object_or_404(User, id=doctor_id, groups__name="Doctor")
 
     @extend_schema(
-        tags=["Schedules"],
+        tags=["doctors", "Schedules"],
         summary="List doctor schedule",
         description="Returns all schedule entries for a specific doctor.",
         parameters=[
@@ -60,7 +60,7 @@ class DoctorScheduleListUpsertView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @extend_schema(
-        tags=["Schedules"],
+        tags=["doctors", "Schedules"],
         summary="Upsert doctor weekly schedule",
         description=(
             "Accepts a list of working schedule days and syncs the doctor's weekly schedule. "
@@ -112,7 +112,7 @@ class DoctorScheduleDayUpdateView(APIView):
         return get_object_or_404(User, id=doctor_id, groups__name="Doctor")
 
     @extend_schema(
-        tags=["Schedules"],
+        tags=["doctors", "Schedules"],
         summary="Update single doctor day schedule",
         description="Updates one doctor schedule day. Returns 404 when no entry exists for the given day.",
         parameters=[
@@ -150,7 +150,7 @@ class DoctorScheduleExceptionListCreateView(APIView):
         return get_object_or_404(User, id=doctor_id, groups__name="Doctor")
 
     @extend_schema(
-        tags=["Schedules"],
+        tags=["doctors", "Schedules"],
         summary="List doctor schedule exceptions",
         description="Returns all schedule exceptions for a specific doctor.",
         parameters=[
@@ -170,7 +170,7 @@ class DoctorScheduleExceptionListCreateView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @extend_schema(
-        tags=["Schedules"],
+        tags=["doctors", "Schedules"],
         summary="Create doctor schedule exception",
         description=(
             "Creates a schedule exception for a doctor. "
@@ -202,7 +202,7 @@ class DoctorScheduleExceptionDeleteView(APIView):
         return get_object_or_404(User, id=doctor_id, groups__name="Doctor")
 
     @extend_schema(
-        tags=["Schedules"],
+        tags=["doctors", "Schedules"],
         summary="Delete doctor schedule exception",
         description="Deletes one schedule exception by its ID for the given doctor.",
         parameters=[

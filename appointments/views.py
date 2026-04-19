@@ -25,6 +25,8 @@ from appointments.serializers import (
     DoctorQueueItemSerializer,
     DoctorSlotSerializer,
     ReceptionistAppointmentSerializer,
+    DoctorScheduleResponseSerializer,
+    DoctorQueueResponseSerializer,
 )
 from appointments.services import (
     BookingConflictError,
@@ -148,6 +150,7 @@ def _apply_query_filters(*, queryset, request, role: str):
 class AppointmentListCreateView(APIView):
     permission_classes = [IsAuthenticated, IsApproved]
 
+    @extend_schema(tags=["appointments"], summary="List appointments")
     def get(self, request):
         queryset = get_appointment_for_list_queryset()
         scoped_queryset, role = scope_queryset_for_user(queryset, request.user)
@@ -160,6 +163,12 @@ class AppointmentListCreateView(APIView):
         serializer = serializer_class(filtered_queryset, many=True, context={"request": request})
         return Response(serializer.data, status=200)
 
+    @extend_schema(
+        tags=["appointments"],
+        summary="Create appointment",
+        request=AppointmentBookingSerializer,
+        responses=AppointmentSerializer,
+    )
     def post(self, request):
         role = get_primary_role(request.user)
         if role != "Patient":
@@ -179,7 +188,7 @@ class AppointmentListCreateView(APIView):
 
 class AppointmentDetailView(APIView):
     permission_classes = [IsAuthenticated, IsApproved]
-
+    @extend_schema(tags=["appointments"], summary="Get appointment detail")
     def get(self, request, pk: int):
         appointment = get_appointment_for_access_check(pk)
         ensure_object_access(user=request.user, appointment=appointment)
@@ -192,7 +201,7 @@ class AppointmentDetailView(APIView):
 
 class AppointmentCancelView(APIView):
     permission_classes = [IsAuthenticated, IsApproved]
-
+    @extend_schema(tags=["appointments"], summary="Cancel appointment")
     def patch(self, request, pk: int):
         appointment = cancel_appointment(appointment_id=pk, actor=request.user)
         role = get_primary_role(request.user)
@@ -202,7 +211,7 @@ class AppointmentCancelView(APIView):
 
 class AppointmentConfirmView(APIView):
     permission_classes = [IsAuthenticated, IsApproved]
-
+    @extend_schema(tags=["appointments"], summary="Confirm appointment")
     def patch(self, request, pk: int):
         appointment = confirm_appointment(appointment_id=pk, actor=request.user)
         role = get_primary_role(request.user)
@@ -212,7 +221,7 @@ class AppointmentConfirmView(APIView):
 
 class AppointmentDeclineView(APIView):
     permission_classes = [IsAuthenticated, IsApproved]
-
+    @extend_schema(tags=["appointments"], summary="Decline appointment", request=AppointmentDeclineSerializer)
     def patch(self, request, pk: int):
         payload = AppointmentDeclineSerializer(data=request.data)
         payload.is_valid(raise_exception=True)
@@ -229,7 +238,7 @@ class AppointmentDeclineView(APIView):
 
 class AppointmentCheckInView(APIView):
     permission_classes = [IsAuthenticated, IsApproved]
-
+    @extend_schema(tags=["appointments"], summary="Check in appointment")
     def patch(self, request, pk: int):
         appointment = check_in_appointment(
             appointment_id=pk,
@@ -243,7 +252,7 @@ class AppointmentCheckInView(APIView):
 
 class AppointmentNoShowView(APIView):
     permission_classes = [IsAuthenticated, IsApproved]
-
+    @extend_schema(tags=["appointments"], summary="Mark appointment as no-show")
     def patch(self, request, pk: int):
         appointment = mark_no_show(appointment_id=pk, actor=request.user)
         role = get_primary_role(request.user)
@@ -253,7 +262,7 @@ class AppointmentNoShowView(APIView):
 
 class AppointmentRescheduleView(APIView):
     permission_classes = [IsAuthenticated, IsApproved]
-
+    @extend_schema(tags=["appointments"], summary="Reschedule appointment", request=AppointmentRescheduleSerializer)
     def patch(self, request, pk: int):
         payload = AppointmentRescheduleSerializer(data=request.data)
         payload.is_valid(raise_exception=True)
@@ -283,7 +292,12 @@ class AppointmentRescheduleView(APIView):
 class DoctorMyScheduleView(APIView):
     permission_classes = [IsAuthenticated, IsApproved, IsDoctor]
 
-    @extend_schema(tags=["doctors"])
+    @extend_schema(
+        tags=["doctors"],
+        summary="Get my schedule",
+        description="Returns the authenticated doctor's persisted slots grouped by date.",
+        responses=DoctorScheduleResponseSerializer,
+    )
     def get(self, request):
         slots = (
             Slot.objects.filter(doctor=request.user)
@@ -301,7 +315,21 @@ class DoctorMyScheduleView(APIView):
 class DoctorMyQueueView(APIView):
     permission_classes = [IsAuthenticated, IsApproved, IsDoctor]
 
-    @extend_schema(tags=["doctors"])
+    @extend_schema(
+        tags=["doctors"],
+        summary="Get my queue",
+        description="Returns the authenticated doctor's queue for a date, ordered with checked-in patients first.",
+        responses=DoctorQueueResponseSerializer,
+        parameters=[
+            OpenApiParameter(
+                name="date",
+                type=str,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description="Calendar date (YYYY-MM-DD). Defaults to today.",
+            )
+        ],
+    )
     def get(self, request):
         date_param = request.query_params.get("date")
         if date_param:

@@ -20,6 +20,7 @@ from appointments.models import (
 	RescheduleHistory,
 )
 from slots.models import Slot
+from messaging.services import send_email
 
 User = get_user_model()
 
@@ -659,20 +660,37 @@ def reschedule_appointment(
 		appointment.appointment_time = new_slot.start_time
 		appointment.session_duration_minutes = new_slot.duration_minutes
 
-		if old_status == AppointmentStatus.CONFIRMED:
+		# If the appointment was CONFIRMED and the patient requests a reschedule,
+		# demote it back to REQUESTED so reception can re-confirm the new time.
+		if old_status == AppointmentStatus.CONFIRMED and role == "Patient":
+			appointment.status = AppointmentStatus.REQUESTED
+		elif old_status == AppointmentStatus.CONFIRMED:
+			# Receptionist-initiated reschedules keep CONFIRMED state.
 			appointment.status = AppointmentStatus.CONFIRMED
 
-		appointment.save(
-			update_fields=[
-				"slot",
-				"doctor",
-				"appointment_date",
-				"appointment_time",
-				"session_duration_minutes",
-				"status",
-				"updated_at",
-			]
-		)
+		try:
+			appointment.save(
+				update_fields=[
+					"slot",
+					"doctor",
+					"appointment_date",
+					"appointment_time",
+					"session_duration_minutes",
+					"status",
+					"updated_at",
+				]
+			)
+		except IntegrityError:
+			# A concurrent create/update may have inserted an appointment for the
+			# same doctor/date/time. Surface a friendly validation error instead
+			# of allowing a 500 HTML error page to reach the client.
+			raise ValidationError(
+				{
+					"detail": _(
+						"Selected time is no longer available; another appointment exists for this doctor at the chosen date/time."
+					)
+				}
+			)
 
 		_set_slot_availability(old_slot, True)
 		_set_slot_availability(new_slot, False)
@@ -695,6 +713,28 @@ def reschedule_appointment(
 			to_status=appointment.status,
 			notes=reason.strip(),
 		)
+
+		# If a patient reschedules a previously CONFIRMED appointment, notify receptionists
+		# so they can re-confirm the new time.
+		if old_status == AppointmentStatus.CONFIRMED and role == "Patient":
+			recipient_emails = list(
+				User.objects.filter(groups__name="Receptionist", is_active=True).values_list("email", flat=True)
+			)
+			if recipient_emails:
+				patient_name = (
+					f"{appointment.patient.first_name} {appointment.patient.last_name}".strip()
+					or appointment.patient.email
+				)
+				subject = f"Reschedule request: Appointment #{appointment.id}"
+				body_lines = [
+					f"Patient: {patient_name}",
+					f"Doctor: {appointment.doctor.get_full_name() if hasattr(appointment.doctor, 'get_full_name') else str(appointment.doctor)}",
+					f"Old: {old_date} {old_time}",
+					f"New: {appointment.appointment_date} {appointment.appointment_time}",
+					f"Reason: {reason.strip()}",
+				]
+				body = "\n".join(body_lines)
+				transaction.on_commit(lambda subject=subject, body=body, recipient_emails=recipient_emails: send_email(subject=subject, body=body, recipient_list=recipient_emails))
 
 		return appointment
 

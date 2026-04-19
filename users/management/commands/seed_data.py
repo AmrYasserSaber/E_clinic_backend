@@ -42,6 +42,7 @@ class Command(BaseCommand):
             date_of_birth=date(1987, 5, 12),
             is_approved=True,
             group_name="Doctor",
+            specialty="Cardiology",
         )
         self._create_user_if_missing(
             email="dr.sara@eclinic.com",
@@ -52,6 +53,40 @@ class Command(BaseCommand):
             date_of_birth=date(1991, 9, 3),
             is_approved=True,
             group_name="Doctor",
+            specialty="Dermatology",
+        )
+        self._create_user_if_missing(
+            email="dr.khaled@eclinic.com",
+            password="Test@123",
+            first_name="Khaled",
+            last_name="Youssef",
+            phone_number="01012355555",
+            date_of_birth=date(1985, 3, 22),
+            is_approved=True,
+            group_name="Doctor",
+            specialty="Neurology",
+        )
+        self._create_user_if_missing(
+            email="dr.layla@eclinic.com",
+            password="Test@123",
+            first_name="Layla",
+            last_name="Mahmoud",
+            phone_number="01511112222",
+            date_of_birth=date(1993, 11, 10),
+            is_approved=True,
+            group_name="Doctor",
+            specialty="Pediatrics",
+        )
+        self._create_user_if_missing(
+            email="dr.tariq@eclinic.com",
+            password="Test@123",
+            first_name="Tariq",
+            last_name="Ibrahim",
+            phone_number="01299998888",
+            date_of_birth=date(1980, 8, 15),
+            is_approved=True,
+            group_name="Doctor",
+            specialty="Orthopedics",
         )
 
     def _seed_receptionist(self) -> None:
@@ -109,6 +144,7 @@ class Command(BaseCommand):
         date_of_birth: date,
         is_approved: bool,
         group_name: str,
+        specialty: str = "",
         is_staff: bool = False,
         is_superuser: bool = False,
     ) -> None:
@@ -124,6 +160,7 @@ class Command(BaseCommand):
             last_name=last_name,
             phone_number=phone_number,
             date_of_birth=date_of_birth,
+            specialty=specialty,
             is_active=True,
             is_staff=is_staff,
             is_superuser=is_superuser,

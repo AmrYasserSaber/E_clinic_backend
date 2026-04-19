@@ -190,6 +190,12 @@ SPECTACULAR_SETTINGS = {
     "TITLE": "E_clinic API",
     "DESCRIPTION": "Backend API documentation",
     "VERSION": "1.0.0",
+    "TAGS": [
+        {"name": "appointments", "description": "Endpoints for patients to book and manage appointments."},
+        {"name": "doctors", "description": "Doctor-facing endpoints: schedules, queues, consultations."},
+        {"name": "Schedules", "description": "Manage doctor weekly schedules and exceptions."},
+        {"name": "Queue", "description": "Queue and availability endpoints for doctors and receptionists."},
+    ],
 }
 
 # Browser clients (e.g. Angular `ng serve` on :4200) calling the API on another origin.
